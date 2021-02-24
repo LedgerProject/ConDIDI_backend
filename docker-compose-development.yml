@@ -1,9 +1,12 @@
+# docker compose file to run the databases for local development and tests
+# databases will be accessible from the outside! Use just for testing!
 # the redis session database
 redis:
   image: redis
   container_name: sessiondb
   ports:
     - "6379:6379"
+# the arangodb database
 arangodb:
   image: arangodb/arangodb
   container_name: userdb
