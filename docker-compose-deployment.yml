@@ -1,0 +1,15 @@
+# the redis session database
+redis:
+  image: redis
+  container_name: sessiondb
+  expose:
+    - 6379
+app:
+  build: ./src/
+  links:
+    - redis
+  ports:
+    - 8080:8080
+  environment:
+    - REDIS_URL=redis://sessiondb
+    - PORT=8080

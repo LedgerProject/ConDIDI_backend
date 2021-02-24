@@ -1,0 +1,17 @@
+# the redis session database
+redis:
+  image: redis
+  container_name: sessiondb
+  ports:
+    - "6379:6379"
+arangodb:
+  image: arangodb/arangodb
+  container_name: userdb
+  environment:
+    - ARANGO_ROOT_PASSWORD=justfortest
+  ports:
+    - "8529:8529"
+  volumes:
+    - ./database/arangodb:/var/lib/arangodb3
+    - ./database/arangoapps:/var/lib/arangodb3-apps
+
