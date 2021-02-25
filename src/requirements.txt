@@ -1,4 +1,5 @@
 redis==3.5.3
-python-arango==7.0.1
+python-arango==7.1.0
 bottle==0.12.19
 gevent==21.1.2
+bcrypt==3.2.0
