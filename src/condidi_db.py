@@ -5,12 +5,11 @@ import bcrypt
 
 
 def createuser(db, userdata):
-
     # userdata = {"name": name, "email":email, "did":did, "password":password}
     users = db.collection("users")
     # see if email already exists
     result = users.find({'email': userdata['email']}, skip=0, limit=10)
-    if len(result) != 0:
+    if result.count() != 0:
         return False
     # hash password
     salt = bcrypt.gensalt()
@@ -38,6 +37,26 @@ def createdatabase(sys_db, dbname="condidi"):
     sys_db.create_database(dbname)
     # TODO: also use specific user for access
     return True
+
+def checkpass(db, password, useremail=None, userid=None):
+    """checks the password of the user given by mail or internal id, returns True if password correct, false if not"""
+    users = db.collection("users")
+    if useremail:
+        result = users.find({'email': useremail}, skip=0, limit=10)
+    elif userid:
+        result = users.find({'_key': userid}, skip=0, limit=10)
+    else:
+        # neither email nor id given
+        return False
+    if result.count() == 0:
+        # user not found
+        return False
+    userhash = result.batch()[0]["password"]
+    if bcrypt.checkpw(password.encode('utf8'), userhash.encode('utf8')):
+        # password correct
+        return True
+    else:
+        return False
 
 
 class TestDatabase(unittest.TestCase):
@@ -71,7 +90,15 @@ class TestDatabase(unittest.TestCase):
         print("create user")
         userdata = {"name":"Testuser", "email": "test@condidi.tib.eu", "password":"test123"}
         print(createuser(db,userdata))
+        print("check existing user detection")
         self.assertFalse(createuser(db,userdata))
+        print("check correct password")
+        self.assertTrue(checkpass(db,password="test123", useremail="test@condidi.tib.eu"))
+        print("check wrong password")
+        self.assertFalse(checkpass(db, password="false", useremail="test@condidi.tib.eu"))
+        print("check wrong password call")
+        self.assertFalse(checkpass(db, password="false"))
+        print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions - this should be in ArangoClient but it is not
         client.close()
