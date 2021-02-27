@@ -2,7 +2,8 @@ from gevent import monkey
 monkey.patch_all()
 from bottle import route, run, template, request, response, post, get
 import condidi_db
-DEVELOPMENT = True
+import os
+
 
 # all routes will be api based I guess
 
@@ -22,9 +23,15 @@ def create_user():
 
 if __name__ == '__main__':
     # start server
-    if DEVELOPMENT:
-        # start single thread server, easier for debugging
-        run(host='localhost', port=8080)
+    if "DEVELOPMENT" in os.environ:
+        DEVELOPMENT = os.environ["DEVELOPMENT"]
     else:
-        # start gevent server based on greenlets
-        run(host='localhost', port=8080, server='gevent')
+        DEVELOPMENT = "True"
+    if DEVELOPMENT == "True":
+        # start single thread server with only localhost access, easier for debugging
+        print("development mode")
+        run(host='127.0.0.1', port=8080)
+    else:
+        # start gevent server based on greenlets with access from anywhere.
+        print("deployment mode")
+        run(host='0.0.0.0', port=8080, server='gevent')

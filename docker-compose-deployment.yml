@@ -1,15 +1,28 @@
-# the redis session database
-redis:
-  image: redis
-  container_name: sessiondb
-  expose:
-    - 6379
-app:
-  build: ./src/
-  links:
-    - redis
-  ports:
-    - 8080:8080
-  environment:
-    - REDIS_URL=redis://sessiondb
-    - PORT=8080
+version: "3"
+services:
+  # the redis session database
+  redis:
+    image: redis
+    container_name: sessiondb
+    expose:
+      - 6379
+  # the arangodb database
+  arangodb:
+    image: arangodb/arangodb
+    container_name: userdb
+    environment:
+      - ARANGO_ROOT_PASSWORD=justfortest
+    expose:
+      - 8529
+    volumes:
+      - ./database/arangodb:/var/lib/arangodb3
+      - ./database/arangoapps:/var/lib/arangodb3-apps
+  condidibackend:
+    build: ./src/
+    ports:
+      - 8080:8080
+    environment:
+      - REDIS_URL="redis:6379"
+      - ARANGO_URL="arangodb:8529"
+      - DEVELOPMENT="False"
+      - PORT=8080
