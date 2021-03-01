@@ -2,7 +2,21 @@
 The Backend of the ConDIDI system.
 
 # Install
-not yet ready. will consist of a setup script and the dockercompose-deployment.yml
+
+Requirements: 
+* Docker
+* Docker-compose
+* Python 3.8 (for development only)
+
+Clone the repository. Then create the database folders. On linux:
+```console
+$ cd database
+$ chmod a+x setup.x
+$ ./setup.x
+$ cd ..
+```
+
+That's it.
 
 # Development of the backend
 Start the database backends with 

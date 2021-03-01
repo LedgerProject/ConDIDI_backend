@@ -27,8 +27,8 @@ def create_collections(db):
     # we use automatically created keys that are int and increment automatically.
     # maybe later add schema validation
     users = db.create_collection("users", key_generator="autoincrement")
-    # we will mostly search for emails, so lets make an index for it. Need to find out if ArangoDB uses
-    # it automatically or if it requires later work
+    # we will mostly search for emails, so lets make an index for it.
+    # ArangoDB is supposed to automatically use the index for faster search if it exists.
     users.add_hash_index(fields=["email"], unique=True)
     # noinspection PyUnusedLocal
     events = db.create_collection("events", key_generator="autoincrement")
