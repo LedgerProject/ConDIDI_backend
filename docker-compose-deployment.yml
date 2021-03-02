@@ -22,7 +22,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      - REDIS_URL="redis:6379"
-      - ARANGO_URL="arangodb:8529"
-      - DEVELOPMENT="False"
+      - REDIS_HOST=redis
+      - ARANGO_URL=arangodb:8529
+      - DEVELOPMENT=False
       - PORT=8080

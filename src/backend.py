@@ -6,6 +6,7 @@ import os
 import json
 from arango import ArangoClient
 import redis
+import time
 # all routes will be api based I guess
 
 
@@ -41,13 +42,24 @@ if __name__ == '__main__':
     else:
         DEVELOPMENT = "True"
     # connect to databases
-    client = ArangoClient(hosts="http://localhost:8529")
+    if "ARANGO_URL" in os.environ:
+        arangourl = "http://" + os.environ["ARANGO_URL"]
+        # also wait for db startup
+        print("Condidi Backend: waiting 10s for database start...")
+        time.sleep(10)
+    else:
+        arangourl = "http://localhost:8529"
+    client = ArangoClient(hosts=arangourl)
+    if "REDIS_HOST" in os.environ:
+        redishost = os.environ["REDIS_HOST"]
+    else:
+        redishost = "127.0.0.1"
      # create database and collections - move to setup script later
     sys_db = client.db("_system", username="root", password="justfortest")
     condidi_db.create_database(sys_db, "condidi")
     db = client.db("condidi", username="root", password="justfortest")
     condidi_db.create_collections(db)
-    server = redis.Redis(host="127.0.0.1", port=6379)
+    server = redis.Redis(host=redishost, port=6379)
 
     if DEVELOPMENT == "True":
         # start single thread server with only localhost access, easier for debugging
