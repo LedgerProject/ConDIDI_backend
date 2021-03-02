@@ -28,8 +28,12 @@ Then you can run the tests and the code in the src directory.
 # Development against the backend
 Start the database backends and the ConDIDI backend with 
 ```console
-$ docker-compose -f docker-compose-deployment.yml up
+$ docker-compose -f docker-compose-deployment.yml up --force-recreate --build
 ```
 Then you can develop your frontend that calls the ConDIDI backend at http://localhost:8080
 
-
+Stop with:
+```console
+$ docker-compose -f docker-compose-deployment.yml down
+```
+to remove the containers

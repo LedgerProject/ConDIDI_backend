@@ -11,14 +11,14 @@ def create_user(db, userdata):
     # see if email already exists
     result = users.find({'email': userdata['email']}, skip=0, limit=10)
     if result.count() != 0:
-        return False
+        return False, None
     # hash password
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(str(userdata["password"]).encode('utf8'), salt)
     userdata["password"] = hashed.decode('utf8')
     # store user
     result = users.insert(userdata)
-    return result
+    return True, result
 
 
 def create_collections(db):
@@ -26,12 +26,15 @@ def create_collections(db):
        db: database connection"""
     # we use automatically created keys that are int and increment automatically.
     # maybe later add schema validation
-    users = db.create_collection("users", key_generator="autoincrement")
-    # we will mostly search for emails, so lets make an index for it.
-    # ArangoDB is supposed to automatically use the index for faster search if it exists.
-    users.add_hash_index(fields=["email"], unique=True)
-    # noinspection PyUnusedLocal
-    events = db.create_collection("events", key_generator="autoincrement")
+    # check if the collections already exist:
+    if not db.has_collection('users'):
+        users = db.create_collection("users", key_generator="autoincrement")
+        # we will mostly search for emails, so lets make an index for it.
+        # ArangoDB is supposed to automatically use the index for faster search if it exists.
+        users.add_hash_index(fields=["email"], unique=True)
+    if not db.has_collection('events'):
+        # noinspection PyUnusedLocal
+        events = db.create_collection("events", key_generator="autoincrement")
     # ArangoDB uses _id and _key for every document as unique identifiers. _id  = collection_name/_key. So
     # _key is our user_id and event_id for later use
     return True
@@ -40,7 +43,8 @@ def create_collections(db):
 def create_database(sys_db, dbname="condidi"):
     """creates the database for condidi"""
     # Create a new database named "test".
-    sys_db.create_database(dbname)
+    if not sys_db.has_database(dbname):
+        sys_db.create_database(dbname)
     # TODO: also use specific user for access
     return True
 
