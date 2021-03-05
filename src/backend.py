@@ -1,6 +1,6 @@
 from gevent import monkey
 monkey.patch_all()
-from bottle import route, run, template, request, response, post, get
+from bottle import route, run, template, request, response, post, get, hook
 import condidi_db
 import os
 import json
@@ -9,6 +9,9 @@ import redis
 import time
 # all routes will be api based I guess
 
+@hook('after_request')
+def enable_cors():
+    response.headers['Access-Control-Allow-Origin'] = '*'
 
 @route('/')
 def index():
