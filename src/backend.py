@@ -36,6 +36,7 @@ def create_user():
             result = {"success": "no", "error": "email exists"}
         else:
             result = {"success": "yes", "error": ""}
+    response.content_type = 'application/json'
     return json.dumps(result)
 
 if __name__ == '__main__':
