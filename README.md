@@ -1,3 +1,5 @@
+[![Docker Image CI](https://github.com/LedgerProject/ConDIDI_backend/actions/workflows/docker-image.yml/badge.svg)](https://github.com/LedgerProject/ConDIDI_backend/actions/workflows/docker-image.yml)
+
 # ConDIDI_backend
 The Backend of the ConDIDI system.
 
