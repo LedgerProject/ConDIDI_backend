@@ -9,9 +9,32 @@ import redis
 import time
 # all routes will be api based I guess
 
+# NodeJS CORS compatibility
+@route('/<:re:.*>', method='OPTIONS')
+def enable_cors_generic_route():
+    """
+    This route takes priority over all others. So any request with an OPTIONS
+    method will be handled by this function.
+    See: https://github.com/bottlepy/bottle/issues/402
+    NOTE: This means we won't 404 any invalid path that is an OPTIONS request.
+    """
+    add_cors_headers()
+
 @hook('after_request')
-def enable_cors():
+def enable_cors_after_request_hook():
+    """
+    This executes after every route. We use it to attach CORS headers when
+    applicable.
+    """
+    add_cors_headers()
+
+def add_cors_headers():
     response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = \
+            'GET, POST, PUT, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = \
+            'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+
 
 @route('/')
 def index():
