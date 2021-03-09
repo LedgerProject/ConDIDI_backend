@@ -58,16 +58,16 @@ def check_pass(db, password, user_email=None, userid=None):
         result = users.find({'_key': userid}, skip=0, limit=10)
     else:
         # neither email nor id given
-        return False
+        return False, None
     if result.count() == 0:
         # user not found
-        return False
+        return False, None
     user_hash = result.batch()[0]["password"]
     if bcrypt.checkpw(password.encode('utf8'), user_hash.encode('utf8')):
         # password correct
-        return True
+        return True, result.batch()[0]["_key"]
     else:
-        return False
+        return False, None
 
 
 class TestDatabase(unittest.TestCase):
@@ -106,13 +106,13 @@ class TestDatabase(unittest.TestCase):
         userdata = {"name": "Testuser", "email": "test@condidi.tib.eu", "password": "test123"}
         print(create_user(db, userdata))
         print("check existing user detection")
-        self.assertFalse(create_user(db, userdata))
+        self.assertFalse(create_user(db, userdata)[0])
         print("check correct password")
-        self.assertTrue(check_pass(db, password="test123", user_email="test@condidi.tib.eu"))
+        self.assertTrue(check_pass(db, password="test123", user_email="test@condidi.tib.eu")[0])
         print("check wrong password")
-        self.assertFalse(check_pass(db, password="false", user_email="test@condidi.tib.eu"))
+        self.assertFalse(check_pass(db, password="false", user_email="test@condidi.tib.eu")[0])
         print("check wrong password call")
-        self.assertFalse(check_pass(db, password="false"))
+        self.assertFalse(check_pass(db, password="false")[0])
         print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions

@@ -7,6 +7,7 @@ import json
 from arango import ArangoClient
 import redis
 import time
+import condidi_sessiondb
 # all routes will be api based I guess
 
 # NodeJS CORS compatibility
@@ -62,6 +63,25 @@ def create_user():
     response.content_type = 'application/json'
     return json.dumps(result)
 
+@post('/api/login_password')
+def login_password():
+    data = request.json
+    if "email" not in data:
+        result = {"success": "no", "error": "email missing"}
+    elif "password" not in data:
+        result = {"success": "no", "error": "password missing"}
+    else:
+        # check password
+        check, userid = condidi_db.check_pass(db, password=data["password"], user_email=data["email"])
+        if check:
+            token = condidi_sessiondb.start_session(db=redisdb, userid=userid)
+            result = {"success": "no", "error": "", "token": token}
+        else:
+            result = {"success": "no", "error": "wrong password"}
+    response.content_type = 'application/json'
+    return json.dumps(result)
+
+
 if __name__ == '__main__':
     # start server
     if "DEVELOPMENT" in os.environ:
@@ -86,7 +106,7 @@ if __name__ == '__main__':
     condidi_db.create_database(sys_db, "condidi")
     db = client.db("condidi", username="root", password="justfortest")
     condidi_db.create_collections(db)
-    server = redis.Redis(host=redishost, port=6379)
+    redisdb = redis.Redis(host=redishost, port=6379)
 
     if DEVELOPMENT == "True":
         # start single thread server with only localhost access, easier for debugging
