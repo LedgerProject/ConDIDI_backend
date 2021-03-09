@@ -66,18 +66,37 @@ def create_user():
 @post('/api/login_password')
 def login_password():
     data = request.json
+    # we neeed both email and password in the request, else fail.
     if "email" not in data:
         result = {"success": "no", "error": "email missing"}
     elif "password" not in data:
         result = {"success": "no", "error": "password missing"}
     else:
-        # check password
+        # ok, now check password
         check, userid = condidi_db.check_pass(db, password=data["password"], user_email=data["email"])
         if check:
             token = condidi_sessiondb.start_session(db=redisdb, userid=userid)
-            result = {"success": "no", "error": "", "token": token}
+            result = {"success": "yes", "error": "", "token": token}
         else:
+            # password failed
             result = {"success": "no", "error": "wrong password"}
+    response.content_type = 'application/json'
+    return json.dumps(result)
+
+
+@post('/api/logout')
+def logout():
+    data = request.json
+    # we need a session token to log out
+    if "token" not in data:
+        result = {"success": "no", "error": "session token missing"}
+    else:
+        flag, check = condidi_sessiondb.close_session(db=redisdb, session_token=data["token"])
+        if flag:
+            result = {"success": "yes", "error": ""}
+        else:
+            # password failed
+            result = {"success": "no", "error": check}
     response.content_type = 'application/json'
     return json.dumps(result)
 

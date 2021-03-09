@@ -32,7 +32,9 @@ def start_session(db, userid):
 # close/delete a session
 def close_session(db, session_token):
     result = db.delete(session_token)
-    return True, result
+    if result == 1:
+        return True, result
+    return False, result
 
 # start a wallet login session
 def start_wallet_session(db, ssi_token):
