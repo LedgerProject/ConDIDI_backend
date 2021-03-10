@@ -5,6 +5,49 @@ import time
 import bcrypt
 
 
+class Event(dict):
+    def __init__(self):
+        """
+        define the keys we want to have in the event document
+        """
+        super().__init__()
+        self.allowed_keys = ["name", "type", "subject", "venue information", "address", "url", "organiser institution",
+                             "contact person name", "contact person email", "submission deadline",
+                             "registration deadline", "date", "organiser userid"]
+        for key in self.allowed_keys:
+            self[key] = None
+
+    def load(self, eventdict):
+        badkeys = list()
+        for key in eventdict:
+            if key in self.allowed_keys:
+                self[key] = eventdict[key]
+            else:
+                badkeys.append(key)
+        return badkeys
+
+
+def create_event(db, neweventdata):
+    # event data
+    eventdata = Event()
+    badkeys = eventdata.load(neweventdata)
+    if len(badkeys) > 0:
+        print("new event: bad keys found:", badkeys)
+    # add event
+    events = db.collection("events")
+    result = events.insert(eventdata)
+    return True, result
+
+def list_events(db, matchdict):
+    # match events by match dict
+    # remove fields we don't support
+    eventdata = Event()
+    badmatch = eventdata.load(matchdict)
+    for key in badmatch:
+        matchdict.pop(key, None)
+    # construct database query
+    #todo
+
 def create_user(db, userdata):
     # userdata = {"name": name, "email":email, "did":did, "password":password}
     users = db.collection("users")
@@ -75,7 +118,7 @@ class TestDatabase(unittest.TestCase):
     def setUpClass(cls):
         # start docker databases
         print("start docker")
-        #subprocess.run(["docker-compose", "-f", "docker-compose-development.yml", "up", "-d"], cwd="..", timeout=20,
+        # subprocess.run(["docker-compose", "-f", "docker-compose-development.yml", "up", "-d"], cwd="..", timeout=20,
         #               check=True)
         subprocess.run(["docker", "run", "-e", "ARANGO_ROOT_PASSWORD=justfortest", "-p", "8529:8529", "-d",
                         "--rm", "--name", "arangotest", "arangodb"],
@@ -87,10 +130,10 @@ class TestDatabase(unittest.TestCase):
     def tearDownClass(cls):
         # stop docker databases
         print("stop docker")
-        #subprocess.run(["docker-compose", "-f", "docker-compose-development.yml", "down"], cwd="..")
+        # subprocess.run(["docker-compose", "-f", "docker-compose-development.yml", "down"], cwd="..")
         subprocess.run(["docker", "stop", "arangotest"])
 
-    def test_manage_database(self):
+    def test_manage_user_database(self):
         client = ArangoClient(hosts="http://localhost:8529")
         sys_db = client.db("_system", username="root", password="justfortest")
         # first try to delete the test database
@@ -113,6 +156,28 @@ class TestDatabase(unittest.TestCase):
         self.assertFalse(check_pass(db, password="false", user_email="test@condidi.tib.eu")[0])
         print("check wrong password call")
         self.assertFalse(check_pass(db, password="false")[0])
+        print("delete test database")
+        self.assertTrue(sys_db.delete_database('test'))
+        # close sessions
+        client.close()
+
+    def test_manage_event_database(self):
+        client = ArangoClient(hosts="http://localhost:8529")
+        sys_db = client.db("_system", username="root", password="justfortest")
+        # first try to delete the test database
+        sys_db.delete_database('test', ignore_missing=True)
+        print("create DB")
+        self.assertTrue(create_database(sys_db, dbname='test'))
+        db = client.db("test", username="root", password="justfortest")
+        # test collection creation
+        print("create collections")
+        self.assertTrue(create_collections(db))
+        # test create event
+        print("event dict")
+        myevent = Event()
+        badkeys = myevent.load({"name": "test event", "url": "http://nada", "error": "False", "organiser userid": 0})
+        self.assertEqual(badkeys, ["error"])
+        self.assertEqual(len(myevent.keys()), len(myevent.allowed_keys))
         print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions
