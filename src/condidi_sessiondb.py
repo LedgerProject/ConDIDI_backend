@@ -24,7 +24,7 @@ def start_session(db, userid):
     """
     # create session key
     session_key = secrets.token_urlsafe(36)
-    session_data=dict(lastaccess=time.time(), login="full")
+    session_data=dict(lastaccess=time.time(), login="full", userid=userid)
     db.set(session_key, json.dumps(session_data))
     return session_key
 
@@ -39,12 +39,19 @@ def close_session(db, session_token):
 # start a wallet login session
 def start_wallet_session(db, ssi_token):
     session_key = ssi_token
-    session_data=dict(lastaccess=time.time(), login="pending")
+    session_data=dict(lastaccess=time.time(), login="pending", ssitoken=ssi_token)
     db.set(session_key, json.dumps(session_data))
     return ssi_token
 
 # check status of session
 def check_session(db, session_token):
+    """
+    check session status. returns status True if session is valid, False if not. Also returns userid for valid sessions,
+    ssitoken when we are still waiting for the credential from the wallet, or None if session is not valid.
+    :param db: redis database connection
+    :param session_token: session token
+    :return: status, userid/ssitoken/none
+    """
     data = db.get(session_token)
     if not data:
         # token not in session database
@@ -55,10 +62,10 @@ def check_session(db, session_token):
         sessiondict["lastaccess"] = time.time()
         db.set(session_token, json.dumps(sessiondict))
         # good session, return true and "full"
-        return True, None
+        return True, sessiondict["userid"]
     elif sessiondict["login"] == "pending":
         # still waiting for wallet confirmation
-        return False, "Waiting for wallet confirmation"
+        return False, sessiondict["ssitoken"]
     # token in session database, but not a matching user
     return False, None
 
@@ -93,7 +100,7 @@ class TestDatabase(unittest.TestCase):
         print("check session status")
         result = check_session(db, token)
         self.assertTrue(result[0])
-        self.assertIsNone(result[1])
+        self.assertIs(result[1],0)
         print("check fake session")
         result = check_session(db, secrets.token_urlsafe(36))
         self.assertFalse(result[0])
@@ -102,7 +109,7 @@ class TestDatabase(unittest.TestCase):
         result = close_session(db, token)
         self.assertTrue(result[0])
         result = close_session(db, token)
-        self.assertTrue(result[0])
+        self.assertFalse(result[0])
         result = check_session(db, token)
         self.assertFalse(result[0])
         self.assertIsNone(result[1])
@@ -112,13 +119,12 @@ class TestDatabase(unittest.TestCase):
         self.assertIs(token, ssitoken)
         result = check_session(db, token)
         self.assertFalse(result[0])
-        self.assertIsNotNone(result[1])
-        print("message: ", result[1])
+        self.assertEqual(result[1], ssitoken)
         print("check delete wallet session")
         result = close_session(db, token)
         self.assertTrue(result[0])
         result = close_session(db, token)
-        self.assertTrue(result[0])
+        self.assertFalse(result[0])
         result = check_session(db, token)
         self.assertFalse(result[0])
         self.assertIsNone(result[1])

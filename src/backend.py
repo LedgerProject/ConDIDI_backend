@@ -1,4 +1,5 @@
 from gevent import monkey
+
 monkey.patch_all()
 from bottle import route, run, template, request, response, post, get, hook
 import condidi_db
@@ -8,7 +9,10 @@ from arango import ArangoClient
 import redis
 import time
 import condidi_sessiondb
+
+
 # all routes will be api based I guess
+
 
 # NodeJS CORS compatibility
 @route('/<:re:.*>', method='OPTIONS')
@@ -21,6 +25,7 @@ def enable_cors_generic_route():
     """
     add_cors_headers()
 
+
 @hook('after_request')
 def enable_cors_after_request_hook():
     """
@@ -29,12 +34,14 @@ def enable_cors_after_request_hook():
     """
     add_cors_headers()
 
+
 def add_cors_headers():
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = \
-            'GET, POST, PUT, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = \
-            'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+
+
+# end CORS compatibility snippet
 
 
 @route('/')
@@ -42,10 +49,14 @@ def index():
     name = 'you'
     return template('<b>Hello {{name}}</b>!', name=name)
 
+
 @post('/api/create_user')
 def create_user():
-    '''gets json object with user data via PUT request. checks if user exist,
-    if not creates user and returns true. If yes returns false.'''
+    """
+    gets json object with user data via PUT request. checks if user exist,
+    if not creates user and returns true. If yes returns false.
+    :return: json dict with keys "success" and "error"
+    """
     data = request.json
     # check data structure.
     if "email" not in data:
@@ -63,10 +74,11 @@ def create_user():
     response.content_type = 'application/json'
     return json.dumps(result)
 
+
 @post('/api/login_password')
 def login_password():
     data = request.json
-    # we neeed both email and password in the request, else fail.
+    # we need both email and password in the request, else fail.
     if "email" not in data:
         result = {"success": "no", "error": "email missing"}
     elif "password" not in data:
@@ -87,17 +99,22 @@ def login_password():
 @post('/api/logout')
 def logout():
     data = request.json
+    response.content_type = 'application/json'
     # we need a session token to log out
     if "token" not in data:
         result = {"success": "no", "error": "session token missing"}
     else:
-        flag, check = condidi_sessiondb.close_session(db=redisdb, session_token=data["token"])
+        try:
+            flag, dbreturn = condidi_sessiondb.close_session(db=redisdb, session_token=data["token"])
+        except Exception as e:
+            print("warning, got execption while trying to close session:", e)
+            result = {"success": "no", "error": "DB error"}
+            return json.dumps(result)
         if flag:
             result = {"success": "yes", "error": ""}
         else:
-            # password failed
-            result = {"success": "no", "error": check}
-    response.content_type = 'application/json'
+            # no such session
+            result = {"success": "yes", "error": "no such session"}
     return json.dumps(result)
 
 
@@ -120,7 +137,7 @@ if __name__ == '__main__':
         redishost = os.environ["REDIS_HOST"]
     else:
         redishost = "127.0.0.1"
-     # create database and collections - move to setup script later
+    # create database and collections - move to setup script later
     sys_db = client.db("_system", username="root", password="justfortest")
     condidi_db.create_database(sys_db, "condidi")
     db = client.db("condidi", username="root", password="justfortest")
