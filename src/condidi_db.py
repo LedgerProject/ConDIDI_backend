@@ -36,6 +36,9 @@ def create_event(db, neweventdata):
     # add event
     events = db.collection("events")
     result = events.insert(eventdata)
+    # add list of participants for event as well
+    participantlists = db.collection("participantlists")
+    participantlists.insert({"eventid": result["_key"], "participants": []})
     return True, result
 
 def find_events(db, matchdict):
@@ -51,6 +54,12 @@ def find_events(db, matchdict):
     result = [item for item in matched.batch()]
     return result
 
+def get_event(db, eventid):
+    # return event dociment for the id
+    events = db.collection("events")
+    eventdict = events.get(eventid)
+    return eventdict
+
 def create_user(db, userdata):
     # userdata = {"name": name, "email":email, "did":did, "password":password}
     users = db.collection("users")
@@ -65,6 +74,25 @@ def create_user(db, userdata):
     # store user
     result = users.insert(userdata)
     return True, result
+
+
+def list_participants(db, eventid):
+    """
+    gets the participant list for a event given by eventid
+    :param db: AragnoDB db
+    :param eventid: ID from the event in events
+    :return: participantlist dictionary
+    """
+    matchdict = {"eventid": eventid}
+    participantlists = db.collection("participantlists")
+    matched = participantlists.find(matchdict, skip=0, limit=10)
+    result = [item for item in matched.batch()]
+    return result[0]
+
+def add_participant(db, eventid):
+    matchdict = {"eventid": eventid}
+    participantlists = db.collection("participantlists")
+    matched = participantlists.find(matchdict, skip=0, limit=10)
 
 
 def create_collections(db):
@@ -83,7 +111,8 @@ def create_collections(db):
         events = db.create_collection("events", key_generator="autoincrement")
     if not db.has_collection('eventparticipants'):
         # noinspection PyUnusedLocal
-        events = db.create_collection("eventparticipants", key_generator="autoincrement")
+        participantlists = db.create_collection("participantlists", key_generator="autoincrement")
+        participantlists.add_hash_index(fields=["eventid"], unique=True)
     # ArangoDB uses _id and _key for every document as unique identifiers. _id  = collection_name/_key. So
     # _key is our user_id and event_id for later use
     return True
@@ -120,6 +149,7 @@ def check_pass(db, password, user_email=None, userid=None):
         return False, None
 
 
+# tests
 class TestDatabase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -192,6 +222,10 @@ class TestDatabase(unittest.TestCase):
         myevent["name"] = "test event 1"
         result = create_event(db, myevent)
         print(result)
+        eventid = result[1]["_key"]
+        print("retrieve 1 event")
+        result = get_event(db, eventid)
+        print(result)
         print("find events")
         result = find_events(db, {"organiser userid": 0})
         print(result)
@@ -199,6 +233,39 @@ class TestDatabase(unittest.TestCase):
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions
         client.close()
+
+    def test_manage_participants_database(self):
+        client = ArangoClient(hosts="http://localhost:8529")
+        sys_db = client.db("_system", username="root", password="justfortest")
+        # first try to delete the test database
+        sys_db.delete_database('test', ignore_missing=True)
+        print("create DB")
+        self.assertTrue(create_database(sys_db, dbname='test'))
+        db = client.db("test", username="root", password="justfortest")
+        # test collection creation
+        print("create collections")
+        self.assertTrue(create_collections(db))
+        # test create event
+        #print("event dict")
+        myevent = Event()
+        eventdict = {"name": "test event1", "url": "http://nada", "error": "False", "organiser userid": 0}
+        #badkeys = myevent.load(eventdict)
+        #self.assertEqual(badkeys, ["error"])
+        #self.assertEqual(len(myevent.keys()), len(myevent.allowed_keys))
+        print("add event")
+        result = create_event(db, myevent)
+        eventid = result[1]["_key"]
+        # list participants, should be empty
+        print("get participants")
+        result = list_participants(db, eventid)
+        print(result)
+        print("add a participant")
+        result = add_participant(db, eventid)
+        print("delete test database")
+        self.assertTrue(sys_db.delete_database('test'))
+        # close sessions
+        client.close()
+
 
 
 if __name__ == '__main__':

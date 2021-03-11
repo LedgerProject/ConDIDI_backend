@@ -56,6 +56,20 @@ def get_data():
             result[key] = request.POST.dict[key][0]
         return result
 
+
+def clean_event_data(eventlist):
+    """
+    Will remove arangoDB internal keys from lists of events in place
+    :param eventlist:
+    :return:
+    """
+    for mydict in eventlist:
+        mydict["eventid"] = mydict["_key"]
+        mydict.pop("_key")
+        mydict.pop("_id")
+        mydict.pop("_rev")
+
+
 @route('/')
 def index():
     name = 'you'
@@ -153,6 +167,7 @@ def add_event():
     eventdict["organiser userid"] = userid
     # add event to database. Bad fieldnames will automatically removed
     status, eventdata = condidi_db.create_event(db=db, neweventdata=eventdict)
+    clean_event_data([eventdata])
     if status:
         result = {"success": "yes", "eventdict": eventdata}
     else:
@@ -181,10 +196,43 @@ def list_my_events():
     matchdict["organiser userid"] = userid
     # add event to database. Bad fieldnames will automatically removed
     eventdata = condidi_db.find_events(db=db, matchdict=matchdict)
+    clean_event_data(eventdata)
     print(eventdata)
     result = {"success": "yes", "eventlist": eventdata}
     return json.dumps(result)
 
+
+@post('/api/list_participants')
+def list_participants():
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    # we need a valid token for this
+    if "token" not in data:
+        result = {"success": "no", "error": "web session token missing"}
+        return result
+    elif "eventid" not in data:
+        result = {"success": "no", "error": "eventid missing"}
+        return result
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # token valid, and we have a userid
+    matchdict = dict()
+    eventid = data["eventid"]
+    # get event data
+    eventdict = condidi_db.get_event(db, eventid)
+    organiserid = eventdict["organiser userid"]
+    if not userid == organiserid:
+        result = {"success": "no", "error": "you are not the organiser of this event"}
+        return result
+    # add event to database. Bad fieldnames will automatically removed
+    participants = condidi_db.list_participants(db=db, matchdict=matchdict)
+    print(participants)
+    result = {"success": "yes", "participants": participants}
+    return json.dumps(result)
 
 if __name__ == '__main__':
     # start server
