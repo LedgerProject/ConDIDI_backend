@@ -46,7 +46,7 @@ def find_events(db, matchdict):
     for key in badmatch:
         matchdict.pop(key, None)
     # construct database query
-    events= db.collection("events")
+    events = db.collection("events")
     matched = events.find(matchdict, skip=0, limit=100)
     result = [item for item in matched.batch()]
     return result

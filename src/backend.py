@@ -70,7 +70,6 @@ def create_user():
     :return: json dict with keys "success" and "error"
     """
     data = get_data()
-    print(data)
     # check data structure.
     if "email" not in data:
         result = {"success": "no", "error": "email missing"}
@@ -146,7 +145,7 @@ def add_event():
     # check session
     status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
     if not status:
-        result = {"success": "no", "error": "wrong session token"}
+        result = {"success": "no", "error": "no such session"}
         return result
     # token valid, and we have a userid
     # set organiser id to userid
@@ -159,6 +158,33 @@ def add_event():
     else:
         result = {"success": "no", "error": eventdata}
     return json.dumps(result)
+
+
+
+@post('/api/list_my_events')
+def list_my_events():
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    # we need a valid token for this
+    if "token" not in data:
+        result = {"success": "no", "error": "web session token missing"}
+        return result
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # token valid, and we have a userid
+    # set organiser id to userid
+    matchdict = dict()
+    matchdict["organiser userid"] = userid
+    # add event to database. Bad fieldnames will automatically removed
+    eventdata = condidi_db.find_events(db=db, matchdict=matchdict)
+    print(eventdata)
+    result = {"success": "yes", "eventlist": eventdata}
+    return json.dumps(result)
+
 
 if __name__ == '__main__':
     # start server
