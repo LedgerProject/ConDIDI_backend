@@ -81,6 +81,9 @@ def create_collections(db):
     if not db.has_collection('events'):
         # noinspection PyUnusedLocal
         events = db.create_collection("events", key_generator="autoincrement")
+    if not db.has_collection('eventparticipants'):
+        # noinspection PyUnusedLocal
+        events = db.create_collection("eventparticipants", key_generator="autoincrement")
     # ArangoDB uses _id and _key for every document as unique identifiers. _id  = collection_name/_key. So
     # _key is our user_id and event_id for later use
     return True
