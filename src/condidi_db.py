@@ -38,7 +38,7 @@ def create_event(db, neweventdata):
     result = events.insert(eventdata)
     return True, result
 
-def list_events(db, matchdict):
+def find_events(db, matchdict):
     # match events by match dict
     # remove fields we don't support
     eventdata = Event()
@@ -46,7 +46,10 @@ def list_events(db, matchdict):
     for key in badmatch:
         matchdict.pop(key, None)
     # construct database query
-    #todo
+    events= db.collection("events")
+    matched = events.find(matchdict, skip=0, limit=100)
+    result = [item for item in matched.batch()]
+    return result
 
 def create_user(db, userdata):
     # userdata = {"name": name, "email":email, "did":did, "password":password}
@@ -98,7 +101,8 @@ def check_pass(db, password, user_email=None, userid=None):
     if user_email:
         result = users.find({'email': user_email}, skip=0, limit=10)
     elif userid:
-        result = users.find({'_key': userid}, skip=0, limit=10)
+        # result = users.find({'_key': userid}, skip=0, limit=10)
+        result = users.get(userid)
     else:
         # neither email nor id given
         return False, None
@@ -175,9 +179,19 @@ class TestDatabase(unittest.TestCase):
         # test create event
         print("event dict")
         myevent = Event()
-        badkeys = myevent.load({"name": "test event", "url": "http://nada", "error": "False", "organiser userid": 0})
+        eventdict = {"name": "test event", "url": "http://nada", "error": "False", "organiser userid": 0}
+        badkeys = myevent.load(eventdict)
         self.assertEqual(badkeys, ["error"])
         self.assertEqual(len(myevent.keys()), len(myevent.allowed_keys))
+        print("add event")
+        result = create_event(db, myevent)
+        print(result)
+        myevent["name"] = "test event 1"
+        result = create_event(db, myevent)
+        print(result)
+        print("find events")
+        result = find_events(db, {"organiser userid": 0})
+        print(result)
         print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions

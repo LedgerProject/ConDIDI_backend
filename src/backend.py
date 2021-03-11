@@ -43,6 +43,18 @@ def add_cors_headers():
 
 # end CORS compatibility snippet
 
+# accept data as json or data dict
+def get_data():
+    if request.json:
+        print("Request is json")
+        return request.json
+    else:
+        # its a form dict, we need to unpack
+        print("Request is form")
+        result = dict()
+        for key in request.POST.dict:
+            result[key] = request.POST.dict[key][0]
+        return result
 
 @route('/')
 def index():
@@ -57,7 +69,8 @@ def create_user():
     if not creates user and returns true. If yes returns false.
     :return: json dict with keys "success" and "error"
     """
-    data = request.json
+    data = get_data()
+    print(data)
     # check data structure.
     if "email" not in data:
         result = {"success": "no", "error": "email missing"}
@@ -117,6 +130,35 @@ def logout():
             result = {"success": "yes", "error": "no such session"}
     return json.dumps(result)
 
+
+@post('/api/add_event')
+def add_event():
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    # we need a valid token for this
+    if "token" not in data:
+        result = {"success": "no", "error": "web session token missing"}
+        return result
+    elif "eventdict" not in data:
+        result = {"success": "no", "error": "eventdict missing"}
+        return result
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "wrong session token"}
+        return result
+    # token valid, and we have a userid
+    # set organiser id to userid
+    eventdict = data["eventdict"]
+    eventdict["organiser userid"] = userid
+    # add event to database. Bad fieldnames will automatically removed
+    status, eventdata = condidi_db.create_event(db=db, neweventdata=eventdict)
+    if status:
+        result = {"success": "yes", "eventdict": eventdata}
+    else:
+        result = {"success": "no", "error": eventdata}
+    return json.dumps(result)
 
 if __name__ == '__main__':
     # start server
