@@ -1,4 +1,5 @@
 from arango import ArangoClient
+import arango
 import unittest
 import subprocess
 import time
@@ -26,6 +27,46 @@ class Event(dict):
                 badkeys.append(key)
         return badkeys
 
+
+class Participant(dict):
+    def __init__(self):
+        """
+        define the keys we want to have in the participant in the participantlist document. if a participant has
+        a condidi userid, it is noted in the userid field, otherwise it is None.
+        """
+        super().__init__()
+        self.allowed_keys = ["userid", "name", "email", "did", "payment status", "attendence status", "participation",
+                             "signup date", "ticket id", "credential id"]
+        for key in self.allowed_keys:
+            self[key] = None
+
+    def load(self, participantdict):
+        badkeys = list()
+        for key in participantdict:
+            if key in self.allowed_keys:
+                self[key] = participantdict[key]
+            else:
+                badkeys.append(key)
+        return badkeys
+
+class Credential(dict):
+    def __init__(self):
+        """
+        a credential document
+        """
+        super().__init__()
+        self.allowed_keys = ["previous ids", "issuing date"]
+        for key in self.allowed_keys:
+            self[key] = None
+
+    def load(self, credentialdict):
+        badkeys = list()
+        for key in credentialdict:
+            if key in self.allowed_keys:
+                self[key] = credentialdict[key]
+            else:
+                badkeys.append(key)
+        return badkeys
 
 def create_event(db, neweventdata):
     # event data
@@ -85,14 +126,47 @@ def list_participants(db, eventid):
     """
     matchdict = {"eventid": eventid}
     participantlists = db.collection("participantlists")
+    participants = db.collection("participants")
     matched = participantlists.find(matchdict, skip=0, limit=10)
-    result = [item for item in matched.batch()]
-    return result[0]
+    participantids = [item for item in matched.batch()]
+    result = [participants.get(item) for item in participantids[0]["participants"] ]
+    return result
 
-def add_participant(db, eventid):
-    matchdict = {"eventid": eventid}
+def add_participant_to_event(db, participantid, eventid=None, listid=None):
+    # we can either use the id of the participant list, or look it up via eventid
     participantlists = db.collection("participantlists")
-    matched = participantlists.find(matchdict, skip=0, limit=10)
+    if not listid:
+        matchdict = {"eventid": eventid}
+        participantlists = db.collection("participantlists")
+        result = participantlists.find(matchdict, skip=0, limit=1)
+        listid = [item for item in result][0]
+    participantsdict = participantlists.get(listid)
+    listofparticipants = participantsdict["participants"]
+    listofparticipants.append(participantid)
+    result = participantlists.replace(participantsdict)
+    return result
+
+
+def add_participant(db, participantdict):
+    newparticipant = Participant()
+    newparticipant.load(participantdict)
+    participants = db.collection("participants")
+    result = participants.insert(newparticipant)
+    return result
+
+def remove_participant(db, participantid, eventid=None, listid=None):
+    # we can either use the id of the participant list, or look it up via eventid
+    participantlists = db.collection("participantlists")
+    if not listid:
+        matchdict = {"eventid": eventid}
+        participantlists = db.collection("participantlists")
+        listid = participantlists.find(matchdict, skip=0, limit=1)[0]
+    participants = db.collection("participants")
+    try:
+        participants.delete(participantid)
+    except arango.execptions.DocumentDeleteError:
+        return False, "participant not found"
+    return True
 
 
 def create_collections(db):
@@ -109,10 +183,21 @@ def create_collections(db):
     if not db.has_collection('events'):
         # noinspection PyUnusedLocal
         events = db.create_collection("events", key_generator="autoincrement")
-    if not db.has_collection('eventparticipants'):
+    if not db.has_collection('participantlists'):
         # noinspection PyUnusedLocal
         participantlists = db.create_collection("participantlists", key_generator="autoincrement")
         participantlists.add_hash_index(fields=["eventid"], unique=True)
+    if not db.has_collection('participants'):
+        # noinspection PyUnusedLocal
+        participantlists = db.create_collection("participants", key_generator="autoincrement")
+        participantlists.add_hash_index(fields=["email"], unique=False)
+        participantlists.add_hash_index(fields=["userid"], unique=False)  # if the participant has no condidi userid, it
+        # will be None
+    if not db.has_collection('credentials'):
+        # noinspection PyUnusedLocal
+        participantlists = db.create_collection("credentials")
+        # we will use the hash as key
+
     # ArangoDB uses _id and _key for every document as unique identifiers. _id  = collection_name/_key. So
     # _key is our user_id and event_id for later use
     return True
@@ -259,8 +344,22 @@ class TestDatabase(unittest.TestCase):
         print("get participants")
         result = list_participants(db, eventid)
         print(result)
+        print("add participant")
+        par = Participant()
+        par.load({"name": "Testparticipant"})
         print("add a participant")
-        result = add_participant(db, eventid)
+        result = add_participant(db, par)
+        parid=result["_key"]
+        print(result)
+        print("add to event")
+        result = add_participant_to_event(db, parid, eventid)
+        print(result)
+        print("list participants")
+        result = list_participants(db, eventid)
+        print(result)
+        print("delete participant")
+        result = add_participant(db, parid)
+        print(result)
         print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions
