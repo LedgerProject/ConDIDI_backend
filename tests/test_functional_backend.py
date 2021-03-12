@@ -151,6 +151,7 @@ class TestUsers(unittest.TestCase):
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["participants"]), 0)
         # add participants
+        #TODO
         # list participants
 
 unittest.addModuleCleanup(tearDownModule)
