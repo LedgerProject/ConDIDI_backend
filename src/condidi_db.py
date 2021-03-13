@@ -7,7 +7,7 @@ import bcrypt
 
 
 class Event(dict):
-    def __init__(self):
+    def __init__(self, noinit=False):
         """
         define the keys we want to have in the event document
         """
@@ -15,8 +15,9 @@ class Event(dict):
         self.allowed_keys = ["name", "type", "subject", "venue information", "address", "url", "organiser institution",
                              "contact person name", "contact person email", "submission deadline",
                              "registration deadline", "date", "organiser userid"]
-        for key in self.allowed_keys:
-            self[key] = None
+        if not noinit:
+            for key in self.allowed_keys:
+                self[key] = None
 
     def load(self, eventdict):
         badkeys = list()
@@ -29,7 +30,7 @@ class Event(dict):
 
 
 class Participant(dict):
-    def __init__(self):
+    def __init__(self, noinit=False):
         """
         define the keys we want to have in the participant in the participantlist document. if a participant has
         a condidi userid, it is noted in the userid field, otherwise it is None.
@@ -37,8 +38,9 @@ class Participant(dict):
         super().__init__()
         self.allowed_keys = ["userid", "name", "email", "did", "payment status", "attendence status", "participation",
                              "signup date", "ticket id", "credential id"]
-        for key in self.allowed_keys:
-            self[key] = None
+        if not noinit:
+            for key in self.allowed_keys:
+                self[key] = None
 
     def load(self, participantdict):
         badkeys = list()
