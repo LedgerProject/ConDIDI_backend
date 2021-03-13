@@ -132,3 +132,5 @@ dmypy.json
 .idea
 /database/arangoapps/
 /database/arangodb/
+sterr.txt
+stout.txt

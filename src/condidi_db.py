@@ -92,8 +92,8 @@ def find_events(db, matchdict):
     # construct database query
     events = db.collection("events")
     matched = events.find(matchdict, skip=0, limit=100)
-    result = [item for item in matched.batch()]
-    return result
+    eventslist = [item for item in matched.batch()]
+    return eventslist
 
 def get_event(db, eventid):
     # return event dociment for the id
@@ -136,31 +136,75 @@ def add_participant_to_event(db, participantid, eventid=None, listid=None):
     # we can either use the id of the participant list, or look it up via eventid
     participantlists = db.collection("participantlists")
     if not listid:
+        if not eventid:
+            return False, "need either eventid, orlistid"
+        # find by eventid
         matchdict = {"eventid": eventid}
         participantlists = db.collection("participantlists")
         result = participantlists.find(matchdict, skip=0, limit=1)
-        listid = [item for item in result][0]
-    participantsdict = participantlists.get(listid)
+        participantsdict = [item for item in result]
+        if len(participantsdict) == 0:
+            return False, "Participant not found"
+        else:
+            participantsdict = participantsdict[0]
+    else:
+        participantsdict = participantlists.get(listid)
     listofparticipants = participantsdict["participants"]
+    if participantid in listofparticipants:
+        return True, "Participant already added"
     listofparticipants.append(participantid)
+    print(listofparticipants)
     result = participantlists.replace(participantsdict)
-    return result
+    return True, result
 
 
-def add_participant(db, participantdict):
+def create_participant(db, participantdict):
+    """
+    creates an participant to the database
+    :param db: arangodb connection
+    :param participantdict: dict for participant
+    :return: arango insert result, i.e. the dict with the _key, _id and _rev
+    """
     newparticipant = Participant()
     newparticipant.load(participantdict)
     participants = db.collection("participants")
     result = participants.insert(newparticipant)
     return result
 
-def remove_participant(db, participantid, eventid=None, listid=None):
+def remove_participant_from_event(db, participantid, eventid=None, listid=None):
+    participantlists = db.collection("participantlists")
+    if not listid:
+        if not eventid:
+            return False, "need either eventid, orlistid"
+        # find by eventid
+        matchdict = {"eventid": eventid}
+        participantlists = db.collection("participantlists")
+        result = participantlists.find(matchdict, skip=0, limit=1)
+        participantsdict = [item for item in result]
+        if len(participantsdict) == 0:
+            return False, "Participant not found"
+        else:
+            participantsdict = participantsdict[0]
+    else:
+        participantsdict = participantlists.get(listid)
+    listofparticipants = participantsdict["participants"]
+    if participantid not in listofparticipants:
+        return True, "Participant already removed"
+    listofparticipants.remove(participantid)
+    print(listofparticipants)
+    result = participantlists.replace(participantsdict)
+    return True, result
+
+
+def delete_participant(db, participantid, eventid=None, listid=None):
     # we can either use the id of the participant list, or look it up via eventid
     participantlists = db.collection("participantlists")
     if not listid:
+        if not eventid:
+            return False, "need either eventid, orlistid"
         matchdict = {"eventid": eventid}
         participantlists = db.collection("participantlists")
-        listid = participantlists.find(matchdict, skip=0, limit=1)[0]
+        listid = [item for item in participantlists.find(matchdict, skip=0, limit=1)][0]
     participants = db.collection("participants")
     try:
         participants.delete(participantid)
@@ -347,19 +391,27 @@ class TestDatabase(unittest.TestCase):
         print("add participant")
         par = Participant()
         par.load({"name": "Testparticipant"})
-        print("add a participant")
-        result = add_participant(db, par)
+        print("create a participant")
+        result = create_participant(db, par)
         parid=result["_key"]
-        print(result)
-        print("add to event")
-        result = add_participant_to_event(db, parid, eventid)
         print(result)
         print("list participants")
         result = list_participants(db, eventid)
         print(result)
-        print("delete participant")
-        result = add_participant(db, parid)
+        print("add to event")
+        result = add_participant_to_event(db, parid, eventid=eventid)
         print(result)
+        listid = result[1]["_key"]
+        result = add_participant_to_event(db, parid, listid=listid)
+        print(result)
+        print("remove participant")
+        result = remove_participant_from_event(db, parid, eventid = eventid)
+        print(result)
+        result = remove_participant_from_event(db, parid, listid = listid)
+        print(result)
+        result = list_participants(db, eventid)
+        print(result)
+
         print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
         # close sessions

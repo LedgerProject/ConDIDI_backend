@@ -70,6 +70,27 @@ def clean_event_data(eventlist):
         mydict.pop("_rev")
 
 
+def clean_participant_data(participantlist):
+    """
+    Will remove arangoDB internal keys from list in place
+    :param eventlist:
+    :return:
+    """
+    for mydict in participantlist:
+        mydict["participantid"] = mydict["_key"]
+        mydict.pop("_key")
+        mydict.pop("_id")
+        mydict.pop("_rev")
+
+
+def check_input_data(data, required_fields):
+    for item in required_fields:
+        if item not in data:
+            message = {"success": "no", "error": "%s missing" % item}
+            return False, message
+    return True, None
+
+
 @route('/')
 def index():
     name = 'you'
@@ -84,20 +105,17 @@ def create_user():
     :return: json dict with keys "success" and "error"
     """
     data = get_data()
+    response.content_type = 'application/json'
     # check data structure.
-    if "email" not in data:
-        result = {"success": "no", "error": "email missing"}
-    elif "name" not in data:
-        result = {"success": "no", "error": "name missing"}
-    elif "password" not in data:
-        result = {"success": "no", "error": "password missing"}
+    passed, message = check_input_data(data, ["email", "name", "password"])
+    if not passed:
+        result = message
     else:
         status, newuser = condidi_db.create_user(db=db, userdata=data)
         if not status:
             result = {"success": "no", "error": "email exists"}
         else:
             result = {"success": "yes", "error": ""}
-    response.content_type = 'application/json'
     return json.dumps(result)
 
 
@@ -105,10 +123,9 @@ def create_user():
 def login_password():
     data = request.json
     # we need both email and password in the request, else fail.
-    if "email" not in data:
-        result = {"success": "no", "error": "email missing"}
-    elif "password" not in data:
-        result = {"success": "no", "error": "password missing"}
+    passed, message = check_input_data(data, ["email", "password"])
+    if not passed:
+        result = message
     else:
         # ok, now check password
         check, userid = condidi_db.check_pass(db, password=data["password"], user_email=data["email"])
@@ -150,12 +167,9 @@ def add_event():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    if "token" not in data:
-        result = {"success": "no", "error": "web session token missing"}
-        return result
-    elif "eventdict" not in data:
-        result = {"success": "no", "error": "eventdict missing"}
-        return result
+    passed, message = check_input_data(data, ["token", "eventdict"])
+    if not passed:
+        return message
     # check session
     status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
     if not status:
@@ -173,7 +187,6 @@ def add_event():
     else:
         result = {"success": "no", "error": eventdata}
     return json.dumps(result)
-
 
 
 @post('/api/list_my_events')
@@ -208,18 +221,15 @@ def list_participants():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    if "token" not in data:
-        result = {"success": "no", "error": "web session token missing"}
-        return result
-    elif "eventid" not in data:
-        result = {"success": "no", "error": "eventid missing"}
-        return result
+    passed, message = check_input_data(data, ["token", "eventid"])
+    if not passed:
+        result = message
     # check session
     status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
-    # token valid, and we have a userid
+    # token valid, and we have an eventid
     matchdict = dict()
     eventid = data["eventid"]
     # get event data
@@ -229,10 +239,11 @@ def list_participants():
         result = {"success": "no", "error": "you are not the organiser of this event"}
         return result
     # add event to database. Bad fieldnames will automatically removed
-    participants = condidi_db.list_participants(db=db, matchdict=matchdict)
+    participants = condidi_db.list_participants(db=db, eventid=eventid)
     print(participants)
     result = {"success": "yes", "participants": participants}
     return json.dumps(result)
+
 
 if __name__ == '__main__':
     # start server
