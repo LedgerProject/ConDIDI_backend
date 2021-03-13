@@ -23,6 +23,7 @@ def startsystem():
     with open("stdout.txt", "wb") as out, open("stderr.txt", "wb") as err:
         backend = subprocess.Popen(["python3", "src/backend.py"], cwd="../", stdout=out, stderr=err)
     # give system some time to start up
+    print("\nsee files stderr.txt and stdout.txt for python backend process output!\n")
     return True
 
 
@@ -109,7 +110,7 @@ class TestUsers(unittest.TestCase):
         calldict = {"token": token, "eventdict": eventdict}
         r = requests.post('http://localhost:8080/api/add_event', json=calldict)
         result = r.json()
-        print(result)
+        #print(result)
         self.assertEqual(result["success"], "yes")
         eventdict = {"name": "test event1", "url": "http://nada", "error": "False", "organiser userid": 0}
         calldict = {"token": token, "eventdict": eventdict}
@@ -120,7 +121,7 @@ class TestUsers(unittest.TestCase):
         calldict = {"token": token}
         r = requests.post('http://localhost:8080/api/list_my_events', json=calldict)
         result = r.json()
-        print(result)
+        #print(result)
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["eventlist"]), 2)
         # logout
@@ -151,6 +152,19 @@ class TestUsers(unittest.TestCase):
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["participants"]), 0)
         # add participants
+        participantdict = {"name": "Testuser", "email": "testuser@test.invalid", "did":"12345", "payment status": "paid",
+                           "attendence status": "registered", "participation": "speaker",
+                             "signup date": "2021-01-01", "ticket id":None, "credential id": None}
+        calldict = {"token": token, "eventid": eventid, "participantdict": participantdict}
+        r = requests.post('http://localhost:8080/api/add_participant', json=calldict)
+        self.assertEqual(result["success"], "yes")
+        # list participants
+        calldict = {"token": token, "eventid": eventid}
+        r = requests.post('http://localhost:8080/api/list_participants', json=calldict)
+        result = r.json()
+        self.assertEqual(result["success"], "yes")
+        self.assertEqual(len(result["participants"]), 1)
+        print(result)
         #TODO
         # list participants
 

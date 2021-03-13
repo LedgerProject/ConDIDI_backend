@@ -63,11 +63,12 @@ def clean_event_data(eventlist):
     :param eventlist:
     :return:
     """
-    for mydict in eventlist:
-        mydict["eventid"] = mydict["_key"]
-        mydict.pop("_key")
-        mydict.pop("_id")
-        mydict.pop("_rev")
+    if len(eventlist)>0:
+        for mydict in eventlist:
+            mydict["eventid"] = mydict["_key"]
+            mydict.pop("_key")
+            mydict.pop("_id")
+            mydict.pop("_rev")
 
 
 def clean_participant_data(participantlist):
@@ -76,11 +77,12 @@ def clean_participant_data(participantlist):
     :param eventlist:
     :return:
     """
-    for mydict in participantlist:
-        mydict["participantid"] = mydict["_key"]
-        mydict.pop("_key")
-        mydict.pop("_id")
-        mydict.pop("_rev")
+    if len(participantlist)>0:
+        for mydict in participantlist:
+            mydict["participantid"] = mydict["_key"]
+            mydict.pop("_key")
+            mydict.pop("_id")
+            mydict.pop("_rev")
 
 
 def check_input_data(data, required_fields):
@@ -240,9 +242,44 @@ def list_participants():
         return result
     # add event to database. Bad fieldnames will automatically removed
     participants = condidi_db.list_participants(db=db, eventid=eventid)
-    print(participants)
+    clean_participant_data(participants)
     result = {"success": "yes", "participants": participants}
     return json.dumps(result)
+
+
+@post('/api/add_participant')
+def add_participants():
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    # we need a valid token for this
+    passed, message = check_input_data(data, ["token", "participantdict"])
+    if not passed:
+        return message
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # add participant
+    participantdict = data["participantdict"]
+    result = condidi_db.create_participant(db, participantdict)
+    participantid = result["_key"]
+    result = {"success": "yes", "error": ""}
+    # if we have an eventid, also add participant to event
+    if "eventid" in data:
+        if data["eventid"]:
+            # first check if the user is the event owner
+            # get event data
+            eventdict = condidi_db.get_event(db, data["eventid"])
+            organiserid = eventdict["organiser userid"]
+            if not userid == organiserid:
+                result = {"success": "no", "error": "you are not the organiser of this event"}
+                return result
+            status, listdata = condidi_db.add_participant_to_event(db, participantid, data["eventid"])
+            if not status:
+                result = {"success": "no", "error": "could not add participant to event"}
+    return result
 
 
 if __name__ == '__main__':
