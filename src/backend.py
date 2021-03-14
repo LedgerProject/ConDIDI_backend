@@ -9,6 +9,10 @@ from arango import ArangoClient
 import redis
 import time
 import condidi_sessiondb
+import asyncio
+import websockets
+import configparser
+import jolocom_backend
 
 # TODO at the moment participants are independen of events. this needs more thinking.
 # all routes will be api based I guess
@@ -42,6 +46,13 @@ def add_cors_headers():
 
 
 # end CORS compatibility snippet
+
+# jolocom deep link
+def make_jolocom_deeplink(message):
+    if not isinstance(message,str):
+        message = json.dumps(message)
+    result = "jolocomwallet://consent/%s" % message
+    return result
 
 # accept data as json or data dict
 def get_data():
@@ -95,6 +106,14 @@ def check_input_data(data, required_fields):
     return True, None
 
 
+async def talk_to_jolocom(message):
+    uri = "ws://localhost:4040"
+    async with websockets.connect(uri) as ws:
+        await ws.send(json.dumps(message))
+        ssiresponse = await ws.recv()
+    return ssiresponse
+
+
 @route('/')
 def index():
     name = 'you'
@@ -121,6 +140,40 @@ def create_user():
         else:
             result = {"success": "yes", "error": ""}
     return json.dumps(result)
+
+
+@post('/api/create_wallet_user')
+def create_wallet_user():
+    """
+    gets json object with user data via PUT request. checks if user exist,
+    if not creates user and returns true. If yes returns false.
+    :return: json dict with keys "success" and "error"
+    """
+    data = get_data()
+    if "password" in data:
+        data.pop["password"]
+    response.content_type = 'application/json'
+    # check data structure.
+    passed, message = check_input_data(data, ["email", "name"])
+    if not passed:
+        result = message
+        return json.dumps(result)
+    # start wallet communication
+    # TODO: reserve the userid. Maybe we need to switch to random ids.
+    claims = {"Name": data["name"], "email": data["email"]}
+    print(CALLBACK_URL)
+    myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
+                                                        credentialtype="ConDIDIUserCredential",
+                                                        claimtype="ConDIDIUser", claims=claims)
+    print(myrequest)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+    loop.close()
+    print(message)
+    result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
+    return json.dumps(result)
+
 
 
 @post('/api/login_password')
@@ -309,7 +362,7 @@ def update_participant():
     return result
 
 @post('/api/remove_participant')
-def update_participant():
+def remove_participant():
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -335,7 +388,33 @@ def update_participant():
     result = {"success": "yes", "error": ""}
     return result
 
+
+
+
+@post('/api/wallet')
+def wallet_callback():
+    data = request.json
+    # send on to jolocom sdk, await response
+    print(data)
+    if "token" in data:
+        myrequest = jolocom_backend.ProcessInteractionToken(token=data['token'])
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        message = loop.run_until_complete(talk_to_jolocom(myrequest))
+        loop.close()
+        print(message)
+    return True
+
+
 if __name__ == '__main__':
+    # load config
+    if os.path.exists("config.ini"):
+        config = configparser.ConfigParser()
+        config.read('config.ini')
+        CALLBACK_URL = config["network"]["callback_url"]
+        print("Callback url: -%s-" %CALLBACK_URL)
+    else:
+        print("Warning! config.ini missing. Wallet connection will not work!")
     # start server
     if "DEVELOPMENT" in os.environ:
         DEVELOPMENT = os.environ["DEVELOPMENT"]
@@ -364,7 +443,7 @@ if __name__ == '__main__':
     if DEVELOPMENT == "True":
         # start single thread server with only localhost access, easier for debugging
         print("development mode")
-        run(host='127.0.0.1', port=8080)
+        run(host='0.0.0.0', port=8080)
     else:
         # start gevent server based on greenlets with access from anywhere.
         print("deployment mode")

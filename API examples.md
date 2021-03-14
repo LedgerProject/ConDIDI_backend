@@ -18,3 +18,10 @@ $ echo '{"token": "...the one from the command before..."}' | curl -X POST -d @-
 {"success": "yes", "error": "no such session"}
 ```
 (delete the test user with the arangodb console at http://0.0.0.0:8529 if you need.)
+
+wallet apis
+
+```console
+$ echo '{"name": "testuser", "email":"test@condidi.invalid"}' | curl -X POST -d @- 'http://localhost:8080/api/create_wallet_user' --header "Content-Type:application/json"
+{"success": "yes", "error": ""}
+```

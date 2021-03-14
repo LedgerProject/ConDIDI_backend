@@ -1,0 +1,14 @@
+[mail]
+smtp_server = 127.0.0.0.1
+smtp_port = 465
+smtp_user = test@test.out
+smtp_password = "hallo"
+smtp_security = None    # either None, SSL or TLS
+
+[network]
+# callback URL for wallet
+callback_url = http://192.168.0.1/api/wallet
+
+[SSI]
+# from the jolocom ssi service, see log
+did = "did...."

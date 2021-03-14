@@ -108,7 +108,7 @@ def find_events(db, matchdict):
     return eventslist
 
 def get_event(db, eventid):
-    # return event dociment for the id
+    # return event document for the id
     events = db.collection("events")
     eventdict = events.get(eventid)
     return eventdict
@@ -120,10 +120,14 @@ def create_user(db, userdata):
     result = users.find({'email': userdata['email']}, skip=0, limit=10)
     if result.count() != 0:
         return False, None
-    # hash password
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(str(userdata["password"]).encode('utf8'), salt)
-    userdata["password"] = hashed.decode('utf8')
+    if "password" in userdata:
+        # hash password
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(str(userdata["password"]).encode('utf8'), salt)
+        userdata["password"] = hashed.decode('utf8')
+    else:
+        # wallet user without password
+        userdata["password"] = ""
     # store user
     result = users.insert(userdata)
     return True, result
