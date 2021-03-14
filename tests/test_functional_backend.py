@@ -151,22 +151,32 @@ class TestUsers(unittest.TestCase):
         result = r.json()
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["participants"]), 0)
-        # add participants
+        # add participant
         participantdict = {"name": "Testuser", "email": "testuser@test.invalid", "did":"12345", "payment status": "paid",
                            "attendence status": "registered", "participation": "speaker",
                              "signup date": "2021-01-01", "ticket id":None, "credential id": None}
         calldict = {"token": token, "eventid": eventid, "participantdict": participantdict}
         r = requests.post('http://localhost:8080/api/add_participant', json=calldict)
+        result = r.json()
         self.assertEqual(result["success"], "yes")
+        participantid = result["participantid"]
         # list participants
         calldict = {"token": token, "eventid": eventid}
         r = requests.post('http://localhost:8080/api/list_participants', json=calldict)
         result = r.json()
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["participants"]), 1)
-        print(result)
-        #TODO
-        # list participants
+        participantdict = {"attendence status": "no-show"}
+        calldict = {"token": token, "eventid": eventid, "participantdict": participantdict, "participantid": participantid }
+        r = requests.post('http://localhost:8080/api/update_participant', json=calldict)
+        result = r.json()
+        self.assertEqual(result["success"], "yes")
+        # remove participant from event
+        calldict = {"token": token, "eventid": eventid, "participantid": participantid }
+        r = requests.post('http://localhost:8080/api/remove_participant', json=calldict)
+        result = r.json()
+        self.assertEqual(result["success"], "yes")
+        #
 
 unittest.addModuleCleanup(tearDownModule)
 

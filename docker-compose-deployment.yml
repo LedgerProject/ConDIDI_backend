@@ -17,6 +17,20 @@ services:
     volumes:
       - ./database/arangodb:/var/lib/arangodb3
       - ./database/arangoapps:/var/lib/arangodb3-apps
+  # jolocom server
+  jolocom:
+    container_name: jolocom
+    build: ./sdk-rpc-interface/packages/server/
+    volumes:
+      - ./database/jolocom/data:/data
+    ports:
+      - '4040:4040'
+    #expose:
+    #  - 4040
+    environment:
+      DATABASE_DIR: '/data'
+      AGENT_PASSWORD: 'hunter2'
+  # condidi backend
   condidibackend:
     build: ./src/
     ports:
@@ -26,3 +40,7 @@ services:
       - ARANGO_URL=arangodb:8529
       - DEVELOPMENT=False
       - PORT=8080
+    depends_on:
+      - redis
+      - arangodb
+      - jolocom

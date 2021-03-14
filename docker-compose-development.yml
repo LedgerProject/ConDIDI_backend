@@ -17,4 +17,16 @@ arangodb:
   volumes:
     - ./database/arangodb:/var/lib/arangodb3
     - ./database/arangoapps:/var/lib/arangodb3-apps
-
+# jolocom server
+jolocom:
+  container_name: jolocom
+  build: ./sdk-rpc-interface/packages/server/
+  volumes:
+    - ./database/jolocom/data:/data
+  ports:
+    - '4040:4040'
+  #expose:
+  #  - 4040
+  environment:
+    DATABASE_DIR: '/data'
+    AGENT_PASSWORD: 'hunter2'

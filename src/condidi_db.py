@@ -26,6 +26,9 @@ class Event(dict):
                 self[key] = eventdict[key]
             else:
                 badkeys.append(key)
+        if "eventid" in badkeys:
+            self["_key"] = eventdict["eventid"]
+            badkeys.remove("eventid")
         return badkeys
 
 
@@ -49,17 +52,21 @@ class Participant(dict):
                 self[key] = participantdict[key]
             else:
                 badkeys.append(key)
+        if "participantid" in badkeys:
+            self["_key"] = participantdict["participantid"]
+            badkeys.remove("participantid")
         return badkeys
 
 class Credential(dict):
-    def __init__(self):
+    def __init__(self, noinit=False):
         """
         a credential document
         """
         super().__init__()
         self.allowed_keys = ["previous ids", "issuing date"]
-        for key in self.allowed_keys:
-            self[key] = None
+        if not noinit:
+            for key in self.allowed_keys:
+                self[key] = None
 
     def load(self, credentialdict):
         badkeys = list()
@@ -68,6 +75,9 @@ class Credential(dict):
                 self[key] = credentialdict[key]
             else:
                 badkeys.append(key)
+        if "credentialid" in badkeys:
+            self["_key"] = credentialdict["credentialid"]
+            badkeys.remove("credentialid")
         return badkeys
 
 def create_event(db, neweventdata):
@@ -172,6 +182,22 @@ def create_participant(db, participantdict):
     participants = db.collection("participants")
     result = participants.insert(newparticipant)
     return result
+
+def update_participant(db, participantdict):
+    """
+    creates an participant to the database
+    :param db: arangodb connection
+    :param participantdict: dict for participant
+    :return: arango insert result, i.e. the dict with the _key, _id and _rev
+    """
+    if "participantid" not in participantdict:
+        return False, "missing participantid"
+    newparticipant = Participant(noinit=True)
+    newparticipant.load(participantdict)
+    participants = db.collection("participants")
+    result = participants.update(newparticipant)
+    print("part updated:", result)
+    return True, result
 
 def remove_participant_from_event(db, participantid, eventid=None, listid=None):
     participantlists = db.collection("participantlists")

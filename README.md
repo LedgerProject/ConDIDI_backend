@@ -18,6 +18,11 @@ $ ./setup.x
 $ cd ..
 ```
 
+Clone the Jolocom SSI service
+```console
+$ git clone https://github.com/jolocom/sdk-rpc-interface.git
+```
+
 That's it.
 
 # Development of the backend
