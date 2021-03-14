@@ -3,7 +3,8 @@ smtp_server = 127.0.0.0.1
 smtp_port = 465
 smtp_user = test@test.out
 smtp_password = "hallo"
-smtp_security = None    # either None, SSL or TLS
+# either None, SSL or TLS
+smtp_security = None
 
 [network]
 # callback URL for wallet
