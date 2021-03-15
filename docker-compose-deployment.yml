@@ -40,6 +40,7 @@ services:
       - ARANGO_URL=arangodb:8529
       - DEVELOPMENT=False
       - PORT=8080
+      - JOLOCOM_URL=jolocom:4040
     depends_on:
       - redis
       - arangodb

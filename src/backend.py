@@ -118,7 +118,7 @@ def check_input_data(data, required_fields):
 
 
 async def talk_to_jolocom(message):
-    uri = "ws://localhost:4040"
+    uri = "ws://"+ JOLOCOM_URL
     async with websockets.connect(uri) as ws:
         await ws.send(json.dumps(message))
         ssiresponse = await ws.recv()
@@ -443,6 +443,10 @@ if __name__ == '__main__':
         DEVELOPMENT = os.environ["DEVELOPMENT"]
     else:
         DEVELOPMENT = "True"
+    if "JOLOCOM_URL" in os.environ:
+        JOLOCOM_URL = os.environ["JOLOCOM_URL"]
+    else:
+        JOLOCOM_URL = "localhost:4040"
     # connect to databases
     if "ARANGO_URL" in os.environ:
         arangourl = "http://" + os.environ["ARANGO_URL"]
