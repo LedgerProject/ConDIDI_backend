@@ -7,3 +7,4 @@ pip~=21.0.1
 setuptools~=54.1.1
 qrcode==6.1
 websockets==8.1
+pillow==8.1.2

@@ -56,8 +56,9 @@ def make_jolocom_deeplink(message):
     result = "jolocomwallet://consent/%s" % message
     return result
 
+
 def generate_qr(data):
-    filename = "site.png"
+    filename = "qrtest.png"
     # generate qr code
     img = qrcode.make(data)
     # save img to a file
@@ -181,6 +182,7 @@ def create_wallet_user():
     message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
     loop.close()
     print(message)
+    generate_qr(message["result"]["interactionToken"])
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
     return json.dumps(result)
 
