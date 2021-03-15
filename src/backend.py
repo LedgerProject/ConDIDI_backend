@@ -13,6 +13,8 @@ import asyncio
 import websockets
 import configparser
 import jolocom_backend
+import qrcode
+
 
 # TODO at the moment participants are independen of events. this needs more thinking.
 # all routes will be api based I guess
@@ -53,6 +55,14 @@ def make_jolocom_deeplink(message):
         message = json.dumps(message)
     result = "jolocomwallet://consent/%s" % message
     return result
+
+def generate_qr(data):
+    filename = "site.png"
+    # generate qr code
+    img = qrcode.make(data)
+    # save img to a file
+    img.save(filename)
+    return True
 
 # accept data as json or data dict
 def get_data():
@@ -394,16 +404,27 @@ def remove_participant():
 @post('/api/wallet')
 def wallet_callback():
     data = request.json
+    response.content_type = 'application/json'
     # send on to jolocom sdk, await response
-    print(data)
+    print("from wallet: ",data)
     if "token" in data:
         myrequest = jolocom_backend.ProcessInteractionToken(token=data['token'])
+        print("to jolocom: ", myrequest)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         message = loop.run_until_complete(talk_to_jolocom(myrequest))
         loop.close()
-        print(message)
-    return True
+        print("from jolocom: ", message)
+    else:
+        response.status = 200
+        return ""
+    ssiresponse = json.loads(message)
+    if "token" in ssiresponse:
+        response.status = 200
+        return json.dumps(ssiresponse)
+    else:
+        response.status = 200
+        return ""
 
 
 if __name__ == '__main__':
