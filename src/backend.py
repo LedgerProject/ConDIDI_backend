@@ -1,7 +1,7 @@
 from gevent import monkey
 
 monkey.patch_all()
-from bottle import route, run, template, request, response, post, get, hook
+from bottle import route, run, template, request, response, post, hook  # ,get
 import condidi_db
 import os
 import json
@@ -16,7 +16,7 @@ import jolocom_backend
 import qrcode
 
 
-# TODO at the moment participants are independen of events. this needs more thinking.
+# TODO at the moment participants are independent of events. this needs more thinking.
 # all routes will be api based I guess
 
 
@@ -51,7 +51,7 @@ def add_cors_headers():
 
 # jolocom deep link
 def make_jolocom_deeplink(message):
-    if not isinstance(message,str):
+    if not isinstance(message, str):
         message = json.dumps(message)
     result = "jolocomwallet://consent/%s" % message
     return result
@@ -64,6 +64,7 @@ def generate_qr(data):
     # save img to a file
     img.save(filename)
     return True
+
 
 # accept data as json or data dict
 def get_data():
@@ -85,7 +86,7 @@ def clean_event_data(eventlist):
     :param eventlist:
     :return:
     """
-    if len(eventlist)>0:
+    if len(eventlist) > 0:
         for mydict in eventlist:
             mydict["eventid"] = mydict["_key"]
             mydict.pop("_key")
@@ -96,7 +97,7 @@ def clean_event_data(eventlist):
 def clean_participant_data(participantlist):
     """
     Will remove arangoDB internal keys from list in place
-    :param eventlist:
+    :param:
     :return:
     """
     if not isinstance(participantlist, list):
@@ -118,10 +119,10 @@ def check_input_data(data, required_fields):
 
 
 async def talk_to_jolocom(message):
-    uri = "ws://"+ JOLOCOM_URL
-    async with websockets.connect(uri) as ws:
+    uri = "ws://" + JOLOCOM_URL
+    async with websockets.connect(uri, timeout=10) as ws:
         await ws.send(json.dumps(message))
-        ssiresponse = await ws.recv()
+        ssiresponse = await asyncio.wait_for(ws.recv(), timeout=10)  # added timeout
     return ssiresponse
 
 
@@ -160,10 +161,10 @@ def create_wallet_user():
     if not creates user and returns true. If yes returns false.
     :return: json dict with keys "success" and "error"
     """
+    response.content_type = 'application/json'
     data = get_data()
     if "password" in data:
-        data.pop["password"]
-    response.content_type = 'application/json'
+        data.pop("password")
     # check data structure.
     passed, message = check_input_data(data, ["email", "name"])
     if not passed:
@@ -171,21 +172,32 @@ def create_wallet_user():
         return json.dumps(result)
     # start wallet communication
     # TODO: reserve the userid. Maybe we need to switch to random ids.
+    status, newuser = condidi_db.create_user(db=db, userdata=data)
+    if not status:
+        result = {"success": "no", "error": "could not store user"}
+        return json.dumps(result)
+    userid = newuser["_key"]
+    print(userid)
     claims = {"Name": data["name"], "email": data["email"]}
     print(CALLBACK_URL)
+    # request token for wallet from jolocom
     myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
-                                                        credentialtype="ConDIDIUser",
-                                                        claimtype="ConDIDIUser", claims=claims)
-    print(myrequest)
+                                                        credentialtype="ProofOfEventOrganizerCredential",
+                                                        claimtype="ProofOfEventOrganizerCredential", claims=claims)
+    # do the websocket dance
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
     loop.close()
+    # message should have the interaction Token
+    # message should be of format {'jsonrpc': '2.0', 'id': myrequest["id"],
+    #                               'result': {'interactionId': newID, 'interactionToken': TokenforQRcode/deeplink}}
+    # now we should add this interaction token to some store so that when the wallet and
+    # jolocom confirm all, we can activate the user
     print(message)
     generate_qr(message["result"]["interactionToken"])
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
     return json.dumps(result)
-
 
 
 @post('/api/login_password')
@@ -293,13 +305,14 @@ def list_participants():
     passed, message = check_input_data(data, ["token", "eventid"])
     if not passed:
         result = message
+        return result
     # check session
     status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
     # token valid, and we have an eventid
-    matchdict = dict()
+    # matchdict = dict()
     eventid = data["eventid"]
     # get event data
     eventdict = condidi_db.get_event(db, eventid)
@@ -341,12 +354,15 @@ def add_participant():
             eventdict = condidi_db.get_event(db, data["eventid"])
             organiserid = eventdict["organiser userid"]
             if not userid == organiserid:
-                result = {"success": "no", "error": "you are not the organiser of this event", "participantid": participantid}
+                result = {"success": "no", "error": "you are not the organiser of this event",
+                          "participantid": participantid}
                 return result
             status, listdata = condidi_db.add_participant_to_event(db, participantid, data["eventid"])
             if not status:
-                result = {"success": "no", "error": "could not add participant to event", "participantid": participantid}
+                result = {"success": "no", "error": "could not add participant to event",
+                          "participantid": participantid}
     return result
+
 
 @post('/api/update_participant')
 def update_participant():
@@ -373,6 +389,7 @@ def update_participant():
     result = {"success": "yes", "error": ""}
     return result
 
+
 @post('/api/remove_participant')
 def remove_participant():
     data = request.json
@@ -397,10 +414,45 @@ def remove_participant():
     status, listdata = condidi_db.remove_participant_from_event(db, data["participantid"], data["eventid"])
     if not status:
         result = {"success": "no", "error": "could not remove participant from event"}
+        return result
     result = {"success": "yes", "error": ""}
     return result
 
 
+@post('/api/issue_ticket')
+def issue_ticket():
+    data = request.json
+    response.content_type = 'application/json'
+    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
+    if not passed:
+        return message
+    # TODO jolocom interaction
+    result = {"success": "yes", "error": ""}
+    return result
+
+
+@post('/api/update_ticket')
+def update_ticket():
+    data = request.json
+    response.content_type = 'application/json'
+    passed, message = check_input_data(data, ["token", "ticketdict"])
+    if not passed:
+        return message
+    # TODO jolocom interaction
+    result = {"success": "yes", "error": ""}
+    return result
+
+
+@post('/api/get_self_checkin_token')
+def get_self_checkin_token():
+    data = request.json
+    response.content_type = 'application/json'
+    passed, message = check_input_data(data, ["token", "eventid"])
+    if not passed:
+        return message
+    # TODO jolocom interaction
+    result = {"success": "yes", "error": "", "token": "ABC"}
+    return result
 
 
 @post('/api/wallet')
@@ -408,7 +460,7 @@ def wallet_callback():
     data = request.json
     response.content_type = 'application/json'
     # send on to jolocom sdk, await response
-    print("from wallet: ",data)
+    print("from wallet: ", data)
     if "token" in data:
         myrequest = jolocom_backend.ProcessInteractionToken(token=data['token'])
         print("to jolocom: ", myrequest)
@@ -419,13 +471,21 @@ def wallet_callback():
         print("from jolocom: ", message)
     else:
         response.status = 200
+        print("to wallet: ")
         return ""
     ssiresponse = json.loads(message)
     if "token" in ssiresponse:
         response.status = 200
+        print("to wallet: ", json.dumps(ssiresponse))
         return json.dumps(ssiresponse)
+    elif "result" in ssiresponse:
+        response.status = 200
+        myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
+        print("to wallet: ", json.dumps(myresponse))
+        return json.dumps(myresponse)
     else:
         response.status = 200
+        print("to wallet: ")
         return ""
 
 
@@ -435,7 +495,7 @@ if __name__ == '__main__':
         config = configparser.ConfigParser()
         config.read('config.ini')
         CALLBACK_URL = config["network"]["callback_url"]
-        print("Callback url: -%s-" %CALLBACK_URL)
+        print("Callback url: -%s-" % CALLBACK_URL)
     else:
         print("Warning! config.ini missing. Wallet connection will not work!")
     # start server

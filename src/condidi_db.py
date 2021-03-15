@@ -4,6 +4,7 @@ import unittest
 import subprocess
 import time
 import bcrypt
+import datetime
 
 
 class Event(dict):
@@ -63,7 +64,7 @@ class Credential(dict):
         a credential document
         """
         super().__init__()
-        self.allowed_keys = ["previous ids", "issuing date"]
+        self.allowed_keys = ["previous ids", "issuing dates", "credentials"]
         if not noinit:
             for key in self.allowed_keys:
                 self[key] = None
@@ -114,7 +115,7 @@ def get_event(db, eventid):
     return eventdict
 
 def create_user(db, userdata):
-    # userdata = {"name": name, "email":email, "did":did, "password":password}
+    # userdata = {"name": name, "email":email, "did":did, "password":password, "signupdate": signupdate iso}
     users = db.collection("users")
     # see if email already exists
     result = users.find({'email': userdata['email']}, skip=0, limit=10)
@@ -128,6 +129,8 @@ def create_user(db, userdata):
     else:
         # wallet user without password
         userdata["password"] = ""
+    if "signupdate" not in userdata:
+        userdata["signupdate"] = datetime.datetime.now().isoformat()
     # store user
     result = users.insert(userdata)
     return True, result
@@ -273,7 +276,10 @@ def create_collections(db):
         # noinspection PyUnusedLocal
         participantlists = db.create_collection("credentials")
         # we will use the hash as key
-
+    if not db.has_collection('ssiinteractions'):
+        # noinspection PyUnusedLocal
+        participantlists = db.create_collection("ssiinteractions")
+        # we will use the hash as key
     # ArangoDB uses _id and _key for every document as unique identifiers. _id  = collection_name/_key. So
     # _key is our user_id and event_id for later use
     return True

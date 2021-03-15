@@ -12,6 +12,7 @@ class InitiateCredentialOffer(dict):
         if not interactionid:
             interactionid = secrets.token_urlsafe(32)
         self["id"] = interactionid
+        #self["interactionId"] = interactionid
 
     def json(self):
         return json.dumps(self)

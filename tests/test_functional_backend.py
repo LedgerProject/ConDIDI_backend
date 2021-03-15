@@ -170,6 +170,7 @@ class TestUsers(unittest.TestCase):
         calldict = {"token": token, "eventid": eventid, "participantdict": participantdict, "participantid": participantid }
         r = requests.post('http://localhost:8080/api/update_participant', json=calldict)
         result = r.json()
+        print(result)
         self.assertEqual(result["success"], "yes")
         # remove participant from event
         calldict = {"token": token, "eventid": eventid, "participantid": participantid }
