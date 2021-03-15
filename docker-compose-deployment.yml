@@ -23,10 +23,10 @@ services:
     build: ./sdk-rpc-interface/packages/server/
     volumes:
       - ./database/jolocom/data:/data
-    ports:
-      - '4040:4040'
-    #expose:
-    #  - 4040
+    #ports:
+    #  - '4040:4040'
+    expose:
+      - 4040
     environment:
       DATABASE_DIR: '/data'
       AGENT_PASSWORD: 'hunter2'

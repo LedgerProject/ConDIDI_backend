@@ -163,7 +163,7 @@ def create_wallet_user():
     claims = {"Name": data["name"], "email": data["email"]}
     print(CALLBACK_URL)
     myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
-                                                        credentialtype="ConDIDIUserCredential",
+                                                        credentialtype="ConDIDIUser",
                                                         claimtype="ConDIDIUser", claims=claims)
     print(myrequest)
     loop = asyncio.new_event_loop()
