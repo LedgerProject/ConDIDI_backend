@@ -1,6 +1,6 @@
-#from gevent import monkey  # comment out for debugging
+# from gevent import monkey  # comment out for debugging
 
-#monkey.patch_all()  # comment out for debugging
+# monkey.patch_all()  # comment out for debugging
 from bottle import route, run, template, request, response, post, hook  # ,get
 import condidi_db
 import os
@@ -14,6 +14,7 @@ import websockets
 import configparser
 import jolocom_backend
 import qrcode
+import datetime
 
 
 # TODO at the moment participants are independent of events. this needs more thinking.
@@ -237,7 +238,9 @@ def login_wallet():
     # no data needed
     response.content_type = 'application/json'
     # ask for credential
-    myrequest = jolocom_backend.InitiateCredentialRequest(callbackurl=CALLBACK_URL, credentialtype="ProofOfEventOrganizerCredential", issuer=SSI_DID)
+    myrequest = jolocom_backend.InitiateCredentialRequest(callbackurl=CALLBACK_URL,
+                                                          credentialtype="ProofOfEventOrganizerCredential",
+                                                          issuer=SSI_DID)
     # do the websocket dance
     if DEVELOPMENT:
         print(myrequest)
@@ -263,8 +266,10 @@ def login_wallet():
     interactiondict = {'type': 'login_wallet'}
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     # create a preliminary wallet session that needs to be activated
-    session_key, interactionid = condidi_sessiondb.start_wallet_session(db=redisdb, ssi_token=message["result"]["interactionId"])
-    result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"], "token": session_key}
+    session_key, interactionid = condidi_sessiondb.start_wallet_session(db=redisdb,
+                                                                        ssi_token=message["result"]["interactionId"])
+    result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"],
+              "token": session_key}
     return json.dumps(result)
 
 
@@ -471,12 +476,72 @@ def remove_participant():
 def issue_ticket():
     data = request.json
     response.content_type = 'application/json'
-    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
+    passed, message = check_input_data(data, ["token", "eventid", "participantid", "token"])
     if not passed:
         return message
-    # TODO jolocom interaction
-    result = {"success": "yes", "error": ""}
-    return result
+    eventid = data["eventid"]
+    participantid = data["participantid"]
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # first check if the user is the event owner
+    # get event data
+    eventdict = condidi_db.get_event(db, eventid)
+    if not eventdict:
+        result = {"success": "no", "error": "no such event"}
+        return result
+    organiserid = eventdict["organiser userid"]
+    if not userid == organiserid:
+        result = {"success": "no", "error": "you are not the organiser of this event"}
+        return result
+    participantdict = condidi_db.get_participant(db, participantid)
+    if not participantdict:
+        result = {"success": "no", "error": "no such participant"}
+        return result
+    participantemail = participantdict["email"]
+    # get ticket data
+    claims = dict()
+    eventdict = condidi_db.get_event(db, data["eventid"])
+    claims["name"] = eventdict["name"]
+    claims["presenter"] = eventdict["presenter"]
+    claims["about"] = eventdict["subject"]
+    claims["time"] = eventdict["date"]
+    claims["location"] = eventdict["address"]
+    #          "name": "Event Name", "presenter": "John Example", "about": "A event discussing topic X", "time": "2021-03-15T13:14:03.836",
+    #      "location": "Conference center X"
+    myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
+                                                        credentialtype="EventInvitationCredential",
+                                                        claimtype="EventInvitationCredential", claims=claims)
+    # do the websocket dance
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+    loop.close()
+    # message should have the interaction Token
+    # message should be of format {'jsonrpc': '2.0', 'id': myrequest["id"],
+    #                               'result': {'interactionId': newID, 'interactionToken': TokenforQRcode/deeplink}}
+    # now we should add this interaction token to some store so that when the wallet and
+    # jolocom confirm all, we can activate the user
+    if DEVELOPMENT:
+        print(message)
+    # check for interaction id
+    if not myrequest["id"] == message["id"]:
+        result = {"success": "no", "error": "internal ID mismatch"}
+        return json.dumps(result)
+    # just for testing
+    if DEVELOPMENT:
+        generate_qr(message["result"]["interactionToken"])
+    # save interaction data so we don't loose the information
+    interactiondict = {'type': 'issue_ticket', "eventid": eventid, "participantid": participantid}
+    condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
+    # mark ticket as issued
+    status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
+                                                             "ticked issued": datetime.date.today().isoformat()})
+    result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
+    # todo email versenden an participantemail
+    return json.dumps(result)
 
 
 @post('/api/update_ticket')
@@ -491,16 +556,64 @@ def update_ticket():
     return result
 
 
-@post('/api/get_self_checkin_token')
-def get_self_checkin_token():
+@post('/api/get_checkin_token')
+def get_checkin_token():
     data = request.json
     response.content_type = 'application/json'
-    passed, message = check_input_data(data, ["token", "eventid"])
+    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
     if not passed:
         return message
-    # TODO jolocom interaction
-    result = {"success": "yes", "error": "", "token": "ABC"}
-    return result
+    eventid = data["eventid"]
+    participantid = data["participantid"]
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # first check if the user is the event owner
+    # get event data
+    eventdict = condidi_db.get_event(db, eventid)
+    if not eventdict:
+        result = {"success": "no", "error": "no such event"}
+        return result
+    organiserid = eventdict["organiser userid"]
+    if not userid == organiserid:
+        result = {"success": "no", "error": "you are not the organiser of this event"}
+        return result
+    participantdict = condidi_db.get_participant(db, participantid)
+    if not participantdict:
+        result = {"success": "no", "error": "no such participant"}
+        return result
+    # ask for credential
+    myrequest = jolocom_backend.InitiateCredentialRequest(callbackurl=CALLBACK_URL,
+                                                          credentialtype="EventInvitationCredential",
+                                                          issuer=SSI_DID)
+    # do the websocket dance
+    if DEVELOPMENT:
+        print(myrequest)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+    loop.close()
+    # message should have the interaction Token
+    # message should be of format {'jsonrpc': '2.0', 'id': myrequest["id"],
+    #                               'result': {'interactionId': newID, 'interactionToken': TokenforQRcode/deeplink}}
+    # now we should add this interaction token to some store so that when the wallet and
+    # jolocom confirm all, we can activate the user
+    if DEVELOPMENT:
+        print(message)
+    # check for interaction id
+    if not myrequest["id"] == message["id"]:
+        result = {"success": "no", "error": "internal ID mismatch"}
+        return json.dumps(result)
+    # just for testing
+    if DEVELOPMENT:
+        generate_qr(message["result"]["interactionToken"])
+    # save interaction data so we don't loose the information
+    interactiondict = {'type': 'checkin_token', "eventid": eventid, "participantid": participantid}
+    condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
+    result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
+    return json.dumps(result)
 
 
 @post('/api/wallet')
@@ -568,7 +681,8 @@ def wallet_callback():
             # save credential for later
             for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
                 credentialid = credential["id"]
-                status, credentildata = condidi_db.add_credential(db, credentialid=credentialid, credentialdict=credential)
+                status, credentildata = condidi_db.add_credential(db, credentialid=credentialid,
+                                                                  credentialdict=credential)
             # right now I don't really care if the credential was saved
             # delete interaction
             status = condidi_db.delete_interaction(db, interactionid=interactionid)
@@ -577,8 +691,8 @@ def wallet_callback():
             myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
             if DEVELOPMENT:
                 print("to wallet: ", json.dumps(myresponse))
-            #testing
-            #return None
+            # testing
+            # return None
             return json.dumps(myresponse)
     elif interactiondict['type'] == 'login_wallet':
         # login with wallet
@@ -603,13 +717,53 @@ def wallet_callback():
                         return ""
                     # ok pretty sure it is the correct user
                     # activate session
-                    condidi_sessiondb.activate_wallet_session(db=redisdb, ssi_token=interactionid, userid=userdict["_key"])
+                    condidi_sessiondb.activate_wallet_session(db=redisdb, ssi_token=interactionid,
+                                                              userid=userdict["_key"])
                     response.status = 200
                     if DEVELOPMENT:
                         print("to wallet: ")
                     return ""
+    elif interactiondict['type'] == 'checkin_token':
+        # login with wallet
+        if ssiresponse["result"]["interactionInfo"]["completed"]:
+            # all
+            eventid = interactiondict["eventid"]
+            participantid = interactiondict["participantid"]
+            #did = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
+            #for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
+            #    credentialid = credential["id"]
+            #    # actually, there is nothing in the credential as of now that is an eventid
+            #    # no point in checking anything
+            # participant als anwesend markieren
+            condidi_db.update_participant(db, {"participantid": participantid, "attendence status": "attended"})
+            # eventuell credential rausschicken?
+            response.status = 200
+            if DEVELOPMENT:
+                print("to wallet: ")
+            return ""
+    elif interactiondict['type'] == 'issue_ticket':
+        if ssiresponse["result"]["interactionInfo"]["completed"]:
+            # save credential for later
+            for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
+                credentialid = credential["id"]
+                status, credentildata = condidi_db.add_credential(db, credentialid=credentialid,
+                                                                  credentialdict=credential)
+            # right now I don't really care if the credential was saved
+            # add ticket id
+            status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
+                                                                     "ticket id": credentialid})
+            # delete interaction
+            status = condidi_db.delete_interaction(db, interactionid=interactionid)
+            # finally send back the credential to wallet
+            response.status = 200
+            myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
+            if DEVELOPMENT:
+                print("to wallet: ", json.dumps(myresponse))
+            # testing
+            # return None
+            return json.dumps(myresponse)
     else:
-        # unkown interaction, should not happen but what do I know
+        # unknown interaction, should not happen but what do I know
         response.status = 404
         if DEVELOPMENT:
             print("to wallet: ")
@@ -618,7 +772,6 @@ def wallet_callback():
     if DEVELOPMENT:
         print("to wallet: ")
     return ""
-
 
 
 if __name__ == '__main__':

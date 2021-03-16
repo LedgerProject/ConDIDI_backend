@@ -13,7 +13,7 @@ class Event(dict):
         define the keys we want to have in the event document
         """
         super().__init__()
-        self.allowed_keys = ["name", "type", "subject", "venue information", "address", "url", "organiser institution",
+        self.allowed_keys = ["name", "type", "subject","presenter", "venue information", "address", "url", "organiser institution",
                              "contact person name", "contact person email", "submission deadline",
                              "registration deadline", "date", "organiser userid"]
         if not noinit:
@@ -41,7 +41,7 @@ class Participant(dict):
         """
         super().__init__()
         self.allowed_keys = ["userid", "name", "email", "did", "payment status", "attendence status", "participation",
-                             "signup date", "ticket id", "credential id"]
+                             "signup date", "ticket id", "ticked issued", "credential id"]
         if not noinit:
             for key in self.allowed_keys:
                 self[key] = None
@@ -157,6 +157,14 @@ def list_participants(db, eventid):
     participantids = [item for item in matched.batch()]
     result = [participants.get(item) for item in participantids[0]["participants"] ]
     return result
+
+
+def get_participant(db, participantid):
+    # return event document for the id
+    participants = db.collection("participants")
+    participantdict = participants.get(participantid)
+    return participantdict
+
 
 def add_participant_to_event(db, participantid, eventid=None, listid=None):
     # we can either use the id of the participant list, or look it up via eventid
@@ -484,8 +492,11 @@ class TestDatabase(unittest.TestCase):
         par.load({"name": "Testparticipant"})
         print("create a participant")
         result = create_participant(db, par)
-        parid=result["_key"]
+        parid = result["_key"]
         print(result)
+        result = get_participant(db, parid)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["_key"],parid)
         print("list participants")
         result = list_participants(db, eventid)
         print(result)
