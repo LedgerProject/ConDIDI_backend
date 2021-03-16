@@ -1,6 +1,6 @@
-from gevent import monkey
+from gevent import monkey  # comment out for debugging
 
-monkey.patch_all()
+monkey.patch_all()  # comment out for debugging
 from bottle import route, run, template, request, response, post, hook  # ,get
 import condidi_db
 import os
@@ -171,15 +171,17 @@ def create_wallet_user():
         result = message
         return json.dumps(result)
     # start wallet communication
-    # TODO: reserve the userid. Maybe we need to switch to random ids.
-    status, newuser = condidi_db.create_user(db=db, userdata=data)
-    if not status:
-        result = {"success": "no", "error": "could not store user"}
-        return json.dumps(result)
-    userid = newuser["_key"]
-    print(userid)
+    # we won't create the user till we have the ok from the wallet. This way the user can try multiple times
+    # status, newuser = condidi_db.create_user(db=db, userdata=data)
+    # if not status:
+    #     result = {"success": "no", "error": "could not store user"}
+    #     return json.dumps(result)
+    # userid = newuser["_key"]
+    # if DEVELOPMENT:
+    #     print(userid)
     claims = {"Name": data["name"], "email": data["email"]}
-    print(CALLBACK_URL)
+    if DEVELOPMENT:
+        print(CALLBACK_URL)
     # request token for wallet from jolocom
     myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
                                                         credentialtype="ProofOfEventOrganizerCredential",
@@ -194,8 +196,18 @@ def create_wallet_user():
     #                               'result': {'interactionId': newID, 'interactionToken': TokenforQRcode/deeplink}}
     # now we should add this interaction token to some store so that when the wallet and
     # jolocom confirm all, we can activate the user
-    print(message)
-    generate_qr(message["result"]["interactionToken"])
+    if DEVELOPMENT:
+        print(message)
+    # check for interaction id
+    if not myrequest["id"] == message["id"]:
+        result = {"success": "no", "error": "internal ID mismatch"}
+        return json.dumps(result)
+    # just for testing
+    if DEVELOPMENT:
+        generate_qr(message["result"]["interactionToken"])
+    # save interaction data so we don't loose the information
+    interactiondict = {'type': 'create_wallet_user', 'name': data['name'], 'email': data['email']}
+    condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
     return json.dumps(result)
 
@@ -459,34 +471,81 @@ def get_self_checkin_token():
 def wallet_callback():
     data = request.json
     response.content_type = 'application/json'
-    # send on to jolocom sdk, await response
-    print("from wallet: ", data)
+    # all we get from the wallet, we send on to jolocom sdk, await response
+    if DEVELOPMENT:
+        print("from wallet: ", data)
     if "token" in data:
         myrequest = jolocom_backend.ProcessInteractionToken(token=data['token'])
-        print("to jolocom: ", myrequest)
+        if DEVELOPMENT:
+            print("to jolocom: ", myrequest)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         message = loop.run_until_complete(talk_to_jolocom(myrequest))
         loop.close()
-        print("from jolocom: ", message)
+        if DEVELOPMENT:
+            print("from jolocom: ", message)
     else:
-        response.status = 200
-        print("to wallet: ")
+        # anything without a token we just acknoledge and ignore
+        response.status = 404
+        if DEVELOPMENT:
+            print("to wallet: ")
         return ""
     ssiresponse = json.loads(message)
-    if "token" in ssiresponse:
-        response.status = 200
-        print("to wallet: ", json.dumps(ssiresponse))
-        return json.dumps(ssiresponse)
-    elif "result" in ssiresponse:
-        response.status = 200
-        myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
-        print("to wallet: ", json.dumps(myresponse))
-        return json.dumps(myresponse)
-    else:
-        response.status = 200
-        print("to wallet: ")
+    # if "token" in ssiresponse:
+    #     response.status = 200
+    #     if DEVELOPMENT:
+    #         print("to wallet: ", json.dumps(ssiresponse))
+    #     return json.dumps(ssiresponse)
+    if "result" not in ssiresponse:
+        response.status = 404
+        if DEVELOPMENT:
+            print("to wallet: ")
         return ""
+    # we have a result, lets see what interaction we are talking about, can be an old one
+    if "interactionId" not in ssiresponse["result"]:
+        # no interactionId, no way to know what to do
+        response.status = 404
+        if DEVELOPMENT:
+            print("to wallet: ")
+        return ""
+    interactionid = ssiresponse["result"]["interactionId"]
+    status, interactiondict = condidi_db.get_interaction(db, interactionid)
+    if not status:
+        # no interactionId info, no way to know what to do
+        response.status = 404
+        if DEVELOPMENT:
+            print("to wallet: ")
+        return ""
+    # check if it was a signup:
+    # {'type': 'create_wallet_user', 'name': data['name'], 'email': data['email']}
+    if interactiondict['type'] == 'create_wallet_user':
+        if ssiresponse["result"]["interactionInfo"]["completed"]:
+            # all clear, get user did, create user, save credential, delete interaction
+            did = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
+            userdict = {"name": interactiondict["name"], "email": interactiondict["email"], "did": did}
+            status, userdata = condidi_db.create_user(db, userdata=userdict)
+            if not status:
+                if DEVELOPMENT:
+                    print("user creation failed")
+                response.status = 409
+                return ""
+            # save credential for later
+            for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
+                credentialid = credential["id"]
+                status, credentildata = condidi_db.add_credential(db, credentialid=credentialid, credentialdict=credential)
+            # right now I don't really care if the credential was saved
+            # delete interaction
+            status = condidi_db.delete_interaction(db, interactionid=interactionid)
+            # finally send back the credential to wallet
+            response.status = 200
+            myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
+            if DEVELOPMENT:
+                print("to wallet: ", json.dumps(myresponse))
+            #testing
+            #return None
+            return json.dumps(myresponse)
+
+
 
 
 if __name__ == '__main__':

@@ -58,28 +58,28 @@ class Participant(dict):
             badkeys.remove("participantid")
         return badkeys
 
-class Credential(dict):
-    def __init__(self, noinit=False):
-        """
-        a credential document
-        """
-        super().__init__()
-        self.allowed_keys = ["previous ids", "issuing dates", "credentials"]
-        if not noinit:
-            for key in self.allowed_keys:
-                self[key] = None
-
-    def load(self, credentialdict):
-        badkeys = list()
-        for key in credentialdict:
-            if key in self.allowed_keys:
-                self[key] = credentialdict[key]
-            else:
-                badkeys.append(key)
-        if "credentialid" in badkeys:
-            self["_key"] = credentialdict["credentialid"]
-            badkeys.remove("credentialid")
-        return badkeys
+# class Credential(dict):
+#     def __init__(self, noinit=False):
+#         """
+#         a credential document
+#         """
+#         super().__init__()
+#         self.allowed_keys = ["previous ids", "issuing dates", "credentials"]
+#         if not noinit:
+#             for key in self.allowed_keys:
+#                 self[key] = None
+#
+#     def load(self, credentialdict):
+#         badkeys = list()
+#         for key in credentialdict:
+#             if key in self.allowed_keys:
+#                 self[key] = credentialdict[key]
+#             else:
+#                 badkeys.append(key)
+#         if "credentialid" in badkeys:
+#             self["_key"] = credentialdict["credentialid"]
+#             badkeys.remove("credentialid")
+#         return badkeys
 
 def create_event(db, neweventdata):
     # event data
@@ -245,6 +245,46 @@ def delete_participant(db, participantid, eventid=None, listid=None):
         participants.delete(participantid)
     except arango.execptions.DocumentDeleteError:
         return False, "participant not found"
+    return True
+
+def add_interaction(db, interactionid, interactiondict):
+    interactions = db.collection("ssiinteractions")
+    interactiondict["_key"] = interactionid
+    result = interactions.insert(interactiondict)
+    return True, result
+
+
+def get_interaction(db, interactionid):
+    interactions = db.collection("ssiinteractions")
+    interactiondict = interactions.get(interactionid)
+    if not interactiondict:
+        return False, None
+    return True, interactiondict
+
+
+def delete_interaction(db, interactionid):
+    interactions = db.collection("ssiinteractions")
+    interactiondict = interactions.delete(interactionid)
+    return True
+
+
+def add_credential(db, credentialid, credentialdict):
+    credentials = db.collection("credentials")
+    credentialdict["_key"] = credentialid
+    result = credentials.insert(credentialdict)
+    return True, result
+
+
+def get_credential(db, credentialid):
+    credentials = db.collection("credentials")
+    credentialdict = credentials.get(credentialid)
+    if not credentialdict:
+        return False, None
+    return True, credentialdict
+
+def delete_credential(db, credentialid):
+    credentials = db.collection("credentials")
+    credentialdict = credentials.delete(credentialid)
     return True
 
 
@@ -455,6 +495,69 @@ class TestDatabase(unittest.TestCase):
         # close sessions
         client.close()
 
+    def test_ssinteractions_database(self):
+        client = ArangoClient(hosts="http://localhost:8529")
+        sys_db = client.db("_system", username="root", password="justfortest")
+        # first try to delete the test database
+        sys_db.delete_database('test', ignore_missing=True)
+        print("create DB")
+        self.assertTrue(create_database(sys_db, dbname='test'))
+        db = client.db("test", username="root", password="justfortest")
+        # test collection creation
+        print("create collections")
+        self.assertTrue(create_collections(db))
+        # test create user
+        print("add interaction")
+        interactionid = "abcd"
+        interactiondict = {"a":['b'],"c":1}
+        status, result = add_interaction(db, interactionid, interactiondict)
+        self.assertTrue(status)
+        self.assertEqual(interactionid, result["_key"])
+        print("get interaction")
+        status, result = get_interaction(db, interactionid)
+        self.assertTrue(status)
+        self.assertEqual(interactionid, result["_key"])
+        self.assertEqual(interactiondict["a"], result["a"])
+        print("delete interaction")
+        status = delete_interaction(db, interactionid)
+        self.assertTrue(status)
+        print("check missing interaction")
+        status, result = get_interaction(db, interactionid)
+        self.assertFalse(status)
+        # close sessions
+        client.close()
+
+    def test_credentials_database(self):
+        client = ArangoClient(hosts="http://localhost:8529")
+        sys_db = client.db("_system", username="root", password="justfortest")
+        # first try to delete the test database
+        sys_db.delete_database('test', ignore_missing=True)
+        print("create DB")
+        self.assertTrue(create_database(sys_db, dbname='test'))
+        db = client.db("test", username="root", password="justfortest")
+        # test collection creation
+        print("create collections")
+        self.assertTrue(create_collections(db))
+        # test create user
+        print("add credential")
+        credentialid = "abcd"
+        credentialdict = {"a":['b'],"c":1}
+        status, result = add_credential(db, credentialid, credentialdict)
+        self.assertTrue(status)
+        self.assertEqual(credentialid, result["_key"])
+        print("get credential")
+        status, result = get_credential(db, credentialid)
+        self.assertTrue(status)
+        self.assertEqual(credentialid, result["_key"])
+        self.assertEqual(credentialdict["a"], result["a"])
+        print("delete credential")
+        status = delete_credential(db, credentialid)
+        self.assertTrue(status)
+        print("check missing credential")
+        status, result = get_credential(db, credentialid)
+        self.assertFalse(status)
+        # close sessions
+        client.close()
 
 
 if __name__ == '__main__':

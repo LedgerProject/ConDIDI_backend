@@ -132,7 +132,8 @@ dmypy.json
 .idea
 /database/arangoapps/
 /database/arangodb/
-sterr.txt
-stout.txt
+stderr.txt
+stdout.txt
 sdk-rpc-interface
 config.ini
+qrtest.png

@@ -49,3 +49,5 @@ class InitiateCredentialRequest(dict):
 
     def json(self):
         return json.dumps(self)
+
+
