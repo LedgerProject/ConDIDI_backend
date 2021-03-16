@@ -41,7 +41,7 @@ class InitiateCredentialRequest(dict):
                           "credentialRequirements": [{
                               "type": ["Credential", credentialtype],
                               "constraints": [{
-                                  "==": [{"var": "Issuer"}, issuer]
+                                  "==": [{"var": "issuer"}, issuer]
                               }]}]}
         if not interactionid:
             interactionid = secrets.token_urlsafe(32)

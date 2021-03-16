@@ -1,6 +1,6 @@
-from gevent import monkey  # comment out for debugging
+#from gevent import monkey  # comment out for debugging
 
-monkey.patch_all()  # comment out for debugging
+#monkey.patch_all()  # comment out for debugging
 from bottle import route, run, template, request, response, post, hook  # ,get
 import condidi_db
 import os
@@ -229,6 +229,42 @@ def login_password():
             # password failed
             result = {"success": "no", "error": "wrong password"}
     response.content_type = 'application/json'
+    return json.dumps(result)
+
+
+@post('/api/login_wallet')
+def login_wallet():
+    # no data needed
+    response.content_type = 'application/json'
+    # ask for credential
+    myrequest = jolocom_backend.InitiateCredentialRequest(callbackurl=CALLBACK_URL, credentialtype="ProofOfEventOrganizerCredential", issuer=SSI_DID)
+    # do the websocket dance
+    if DEVELOPMENT:
+        print(myrequest)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+    loop.close()
+    # message should have the interaction Token
+    # message should be of format {'jsonrpc': '2.0', 'id': myrequest["id"],
+    #                               'result': {'interactionId': newID, 'interactionToken': TokenforQRcode/deeplink}}
+    # now we should add this interaction token to some store so that when the wallet and
+    # jolocom confirm all, we can activate the user
+    if DEVELOPMENT:
+        print(message)
+    # check for interaction id
+    if not myrequest["id"] == message["id"]:
+        result = {"success": "no", "error": "internal ID mismatch"}
+        return json.dumps(result)
+    # just for testing
+    if DEVELOPMENT:
+        generate_qr(message["result"]["interactionToken"])
+    # save interaction data so we don't loose the information
+    interactiondict = {'type': 'login_wallet'}
+    condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
+    # create a preliminary wallet session that needs to be activated
+    session_key, interactionid = condidi_sessiondb.start_wallet_session(db=redisdb, ssi_token=message["result"]["interactionId"])
+    result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"], "token": session_key}
     return json.dumps(result)
 
 
@@ -485,7 +521,7 @@ def wallet_callback():
         if DEVELOPMENT:
             print("from jolocom: ", message)
     else:
-        # anything without a token we just acknoledge and ignore
+        # anything without a token we just acknowledge and ignore
         response.status = 404
         if DEVELOPMENT:
             print("to wallet: ")
@@ -544,7 +580,44 @@ def wallet_callback():
             #testing
             #return None
             return json.dumps(myresponse)
-
+    elif interactiondict['type'] == 'login_wallet':
+        # login with wallet
+        if ssiresponse["result"]["interactionInfo"]["completed"]:
+            # all clear, get user did, create user, save credential, delete interaction
+            did = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
+            for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
+                credentialid = credential["id"]
+                if "email" in credential["claim"]:
+                    useremail = credential["claim"]["email"]
+                    # get our user data
+                    status, userdict = condidi_db.find_user(db, {"email": useremail})
+                    if not status:
+                        response.status = 404
+                        if DEVELOPMENT:
+                            print("user not found", useremail)
+                        return ""
+                    if did != userdict["did"]:
+                        response.status = 404
+                        if DEVELOPMENT:
+                            print("user not found", useremail)
+                        return ""
+                    # ok pretty sure it is the correct user
+                    # activate session
+                    condidi_sessiondb.activate_wallet_session(db=redisdb, ssi_token=interactionid, userid=userdict["_key"])
+                    response.status = 200
+                    if DEVELOPMENT:
+                        print("to wallet: ")
+                    return ""
+    else:
+        # unkown interaction, should not happen but what do I know
+        response.status = 404
+        if DEVELOPMENT:
+            print("to wallet: ")
+        return ""
+    response.status = 404
+    if DEVELOPMENT:
+        print("to wallet: ")
+    return ""
 
 
 
@@ -554,7 +627,9 @@ if __name__ == '__main__':
         config = configparser.ConfigParser()
         config.read('config.ini')
         CALLBACK_URL = config["network"]["callback_url"]
+        SSI_DID = config["ssi"]["did"]
         print("Callback url: -%s-" % CALLBACK_URL)
+        print("SSI DID: -%s-" % SSI_DID)
     else:
         print("Warning! config.ini missing. Wallet connection will not work!")
     # start server

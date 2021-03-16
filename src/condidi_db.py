@@ -135,6 +135,13 @@ def create_user(db, userdata):
     result = users.insert(userdata)
     return True, result
 
+def find_user(db, matchdict):
+     users = db.collection("users")
+     matched = users.find(matchdict, skip=0, limit=1)
+     if matched.count() == 0:
+         return False, None
+     userdata = [item for item in matched.batch()]
+     return True, userdata[0]
 
 def list_participants(db, eventid):
     """
@@ -392,6 +399,12 @@ class TestDatabase(unittest.TestCase):
         print("create user")
         userdata = {"name": "Testuser", "email": "test@condidi.tib.eu", "password": "test123"}
         print(create_user(db, userdata))
+        print("check user")
+        status, result = find_user(db, {"email": userdata["email"]})
+        self.assertTrue(status)
+        for key in userdata:
+            if key != "password":
+                self.assertEqual(userdata[key], result[key])
         print("check existing user detection")
         self.assertFalse(create_user(db, userdata)[0])
         print("check correct password")

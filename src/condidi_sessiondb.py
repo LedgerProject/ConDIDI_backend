@@ -38,10 +38,23 @@ def close_session(db, session_token):
 
 # start a wallet login session
 def start_wallet_session(db, ssi_token):
-    session_key = ssi_token
-    session_data=dict(lastaccess=time.time(), login="pending", ssitoken=ssi_token)
+    session_key = secrets.token_urlsafe(36)
+    session_data=dict(lastaccess=time.time(), login="pending", session_key = session_key, ssitoken=ssi_token)
+    db.set(ssi_token, json.dumps(session_data))
     db.set(session_key, json.dumps(session_data))
-    return ssi_token
+    return session_key, ssi_token
+
+def activate_wallet_session(db, ssi_token, userid):
+    data = json.loads(db.get(ssi_token))
+    if not data:
+        # token not in session database
+        return False
+    print(data)
+    session_key = data["session_key"]
+    session_data = dict(lastaccess=time.time(), login="full", userid=userid)
+    db.set(session_key, json.dumps(session_data))
+    db.delete(ssi_token)
+    return True
 
 # check status of session
 def check_session(db, session_token):
@@ -115,14 +128,16 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNone(result[1])
         print("check wallet pending session")
         ssitoken = "12345"
-        token = start_wallet_session(db, ssitoken)
+        session, token = start_wallet_session(db, ssitoken)
         self.assertIs(token, ssitoken)
         result = check_session(db, token)
         self.assertFalse(result[0])
         self.assertEqual(result[1], ssitoken)
+        print("check activate wallet session")
+        result = activate_wallet_session(db, ssitoken, "1")
         print("check delete wallet session")
         result = close_session(db, token)
-        self.assertTrue(result[0])
+        self.assertFalse(result[0])
         result = close_session(db, token)
         self.assertFalse(result[0])
         result = check_session(db, token)
