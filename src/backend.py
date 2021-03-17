@@ -699,8 +699,11 @@ def wallet_callback():
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # all clear, get user did, create user, save credential, delete interaction
             did = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
-            for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
+            for credential in ssiresponse["result"]["interactionInfo"]["state"]["credentials"]:
                 credentialid = credential["id"]
+                if "ProofOfEventOrganizerCredential" not in credential["type"]:
+                    continue
+                # TODO check credential["expires"]
                 if "email" in credential["claim"]:
                     useremail = credential["claim"]["email"]
                     # get our user data
@@ -715,6 +718,11 @@ def wallet_callback():
                         if DEVELOPMENT:
                             print("user not found", useremail)
                         return ""
+                    if credential["issuer"] != SSI_DID:
+                        response.status = 404
+                        if DEVELOPMENT:
+                            print("wrong issuer", credential["issuer"])
+                        return ""
                     # ok pretty sure it is the correct user
                     # activate session
                     condidi_sessiondb.activate_wallet_session(db=redisdb, ssi_token=interactionid,
@@ -724,13 +732,12 @@ def wallet_callback():
                         print("to wallet: ")
                     return ""
     elif interactiondict['type'] == 'checkin_token':
-        # login with wallet
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # all
             eventid = interactiondict["eventid"]
             participantid = interactiondict["participantid"]
             #did = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
-            #for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
+            #for credential in ssiresponse["result"]["interactionInfo"]["state"]["credentials"]:
             #    credentialid = credential["id"]
             #    # actually, there is nothing in the credential as of now that is an eventid
             #    # no point in checking anything
@@ -779,8 +786,8 @@ if __name__ == '__main__':
     if os.path.exists("config.ini"):
         config = configparser.ConfigParser()
         config.read('config.ini')
-        CALLBACK_URL = config["network"]["callback_url"]
-        SSI_DID = config["ssi"]["did"]
+        CALLBACK_URL = config["network"]["callback_url"].strip('\"')
+        SSI_DID = config["ssi"]["did"].strip('\"')
         print("Callback url: -%s-" % CALLBACK_URL)
         print("SSI DID: -%s-" % SSI_DID)
     else:

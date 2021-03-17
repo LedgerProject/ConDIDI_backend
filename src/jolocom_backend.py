@@ -7,7 +7,7 @@ class InitiateCredentialOffer(dict):
         super().__init__()
         self["jsonrpc"] = "2.0"
         self["method"] = "initiateCredentialOffer"
-        self["params"] = {"callbackURL": callbackurl, "offeredCredentials": [{"type": credentialtype,}],
+        self["params"] = {"callbackURL": callbackurl, "offeredCredentials": [{"type": credentialtype}],
                         "claimData": [{"type": claimtype, "claims": claims}]}
         if not interactionid:
             interactionid = secrets.token_urlsafe(32)
@@ -39,7 +39,7 @@ class InitiateCredentialRequest(dict):
         self["method"] = "initiateCredentialRequest"
         self["params"] = {"callbackURL": callbackurl,
                           "credentialRequirements": [{
-                              "type": ["Credential", credentialtype],
+                              "type": ["VerifiableCredential", credentialtype],
                               "constraints": [{
                                   "==": [{"var": "issuer"}, issuer]
                               }]}]}
