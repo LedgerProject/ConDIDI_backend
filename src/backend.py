@@ -1,6 +1,6 @@
-# from gevent import monkey  # comment out for debugging
+from gevent import monkey  # comment out for debugging
 
-# monkey.patch_all()  # comment out for debugging
+monkey.patch_all()  # comment out for debugging
 from bottle import route, run, template, request, response, post, hook  # ,get
 import condidi_db
 import os
