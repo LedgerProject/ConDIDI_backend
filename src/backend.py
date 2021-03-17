@@ -87,6 +87,8 @@ def clean_event_data(eventlist):
     :param eventlist:
     :return:
     """
+    if not isinstance(eventlist, list):
+        eventlist = [eventlist]
     if len(eventlist) > 0:
         for mydict in eventlist:
             mydict["eventid"] = mydict["_key"]
@@ -348,6 +350,32 @@ def list_my_events():
     result = {"success": "yes", "eventlist": eventdata}
     return json.dumps(result)
 
+
+@post('/api/get_event')
+def get_event():
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    passed, message = check_input_data(data, ["eventid"])
+    if not passed:
+        result = message
+        return result
+    # we need a valid token for this
+    if "token" not in data:
+        result = {"success": "no", "error": "web session token missing"}
+        return result
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # token valid, and we have a userid
+    # todo: check if user is event organiser
+    eventdata = condidi_db.get_event(db=db, eventid=data["eventid"])
+    clean_event_data(eventdata)
+    # print("eventdata:", eventdata)
+    result = {"success": "yes", "eventdict": eventdata}
+    return json.dumps(result)
 
 @post('/api/list_participants')
 def list_participants():

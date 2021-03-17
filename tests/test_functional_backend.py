@@ -117,13 +117,19 @@ class TestUsers(unittest.TestCase):
         r = requests.post('http://localhost:8080/api/add_event', json=calldict)
         result = r.json()
         self.assertEqual(result["success"], "yes")
-        # retrieve event
         calldict = {"token": token}
         r = requests.post('http://localhost:8080/api/list_my_events', json=calldict)
         result = r.json()
-        #print(result)
+        print(result)
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["eventlist"]), 2)
+        # retrieve event
+        calldict = {"token": token, "eventid": result["eventlist"][1]["eventid"]}
+        r = requests.post('http://localhost:8080/api/get_event', json=calldict)
+        result2 = r.json()
+        print("eventdict: " , result2)
+        for key in result2["eventdict"]:
+            self.assertEqual(result2["eventdict"][key], result["eventlist"][1][key])
         # logout
         sessiondict = {"token": token}
         r = requests.post('http://localhost:8080/api/logout', json=sessiondict)
