@@ -218,6 +218,7 @@ def create_wallet_user():
 @post('/api/login_password')
 def login_password():
     data = request.json
+    print(data)
     # we need both email and password in the request, else fail.
     passed, message = check_input_data(data, ["email", "password"])
     if not passed:

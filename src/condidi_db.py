@@ -365,11 +365,11 @@ def check_pass(db, password, user_email=None, userid=None):
         return False, None
     user_hash = result.batch()[0]["password"]
     try:
-        result = bcrypt.checkpw(password.encode('utf8'), user_hash.encode('utf8'))
+        passcheck = bcrypt.checkpw(password.encode('utf8'), user_hash.encode('utf8'))
     except ValueError as e:
         print(e)
         return False, None
-    if result:
+    if passcheck:
         # password correct
         return True, result.batch()[0]["_key"]
     else:
