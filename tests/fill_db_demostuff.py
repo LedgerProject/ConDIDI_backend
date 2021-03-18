@@ -1,7 +1,7 @@
 import requests
 import json
-APIURL = "http://localhost:8080/api/"
-#APIURL = "https://labs.tib.eu/condidi/api/"
+#APIURL = "http://localhost:8080/api/"
+APIURL = "https://labs.tib.eu/condidi/api/"
 
 # create demo organiser
 print("create demo user")
