@@ -19,7 +19,7 @@ def do_update():
     out += result.stdout.replace("\n","<br>")
     out += result.stderr.replace("\n","<br>")
     print(result.stdout)
-    result = subprocess.run(["cp", "-r", "build/*", "/var/www/html/condidi/"], timeout=30, capture_output=True,
+    result = subprocess.run("cp -r build/* /var/www/html/condidi/", timeout=30, capture_output=True,
                             shell=True, text=True, cwd=DIRNAME)
     out += result.stdout.replace("\n","<br>")
     out += result.stderr.replace("\n","<br>")
