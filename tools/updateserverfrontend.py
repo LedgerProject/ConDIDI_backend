@@ -6,24 +6,25 @@ PASS=""
 DIRNAME = "/var/local/condidife/ConDIDI_frontend"
 
 def do_update():
-    out=""
+    out="<html><head></head><body>"
     result = subprocess.run(["git", "pull"], timeout=30, capture_output=True, text=True, cwd=DIRNAME)
-    out += result.stdout
-    out += result.stderr
+    out += result.stdout.replace("\n","<br>")
+    out += result.stderr.replace("\n","<br>")
     print(result.stdout)
     result = subprocess.run(["npm", "install", "--force"], timeout=120, capture_output=True, text=True, cwd=DIRNAME)
-    out += result.stdout
-    out += result.stderr
+    out += result.stdout.replace("\n","<br>")
+    out += result.stderr.replace("\n","<br>")
     print(result.stdout)
     result = subprocess.run(["npm", "run", "build"], timeout=120, capture_output=True, text=True, cwd=DIRNAME)
-    out += result.stdout
-    out += result.stderr
+    out += result.stdout.replace("\n","<br>")
+    out += result.stderr.replace("\n","<br>")
     print(result.stdout)
-    result = subprocess.run(["cp", "-r", "build/*", "/var/ww/html/condidi/"], timeout=30, capture_output=True,
+    result = subprocess.run(["cp", "-r", "build/*", "/var/www/html/condidi/"], timeout=30, capture_output=True,
                             shell=True, text=True, cwd=DIRNAME)
-    out += result.stdout
-    out += result.stderr
+    out += result.stdout.replace("\n","<br>")
+    out += result.stderr.replace("\n","<br>")
     print(result.stdout)
+    out += "</body>"
     return out
 
 @route('/updateserver')
