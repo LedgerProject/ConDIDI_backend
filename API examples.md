@@ -25,5 +25,5 @@ wallet apis
 $ echo '{"name": "testuser", "email":"test@condidi.invalid"}' | curl -X POST -d @- 'http://localhost:8080/api/create_wallet_user' --header "Content-Type:application/json"
 {"success": "yes", "error": "", "interactionToken": "..."]}
 $ echo '' | curl -X POST -d @- 'http://localhost:8080/api/login_wallet' --header "Content-Type:application/json" 
-{"success": "yes", "error": "", "interactionToken": "..."]}
+{"success": "yes", "error": "", "interactionToken": "...", token: "...tokenforwebsession-willbevalidoncewalletconfirms-..."]}
 ```
