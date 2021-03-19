@@ -110,8 +110,12 @@ def find_events(db, matchdict):
 
 def get_event(db, eventid):
     # return event document for the id
+    print("requested event data for id: ", eventid)
     events = db.collection("events")
-    eventdict = events.get(eventid)
+    try:
+        eventdict = events.get(eventid)
+    except:
+        eventdict = {}
     return eventdict
 
 def create_user(db, userdata):
