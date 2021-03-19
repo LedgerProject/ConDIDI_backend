@@ -508,7 +508,7 @@ def remove_participant():
 def issue_ticket():
     data = request.json
     response.content_type = 'application/json'
-    passed, message = check_input_data(data, ["token", "eventid", "participantid", "token"])
+    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
     if not passed:
         return message
     eventid = data["eventid"]

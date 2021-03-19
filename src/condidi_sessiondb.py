@@ -12,7 +12,7 @@ import json
 # "DID": User DID (can be empty)
 # "email": User email
 # "sessionstatus": "valid" if logged in, "waiting" if a wallet session waits for wallet confirmation
-#
+# TODO: add EXPIRE from redis https://redis.io/commands/expire
 
 # start a password login session
 def start_session(db, userid):
