@@ -373,9 +373,12 @@ def get_event():
     # token valid, and we have a userid
     # todo: check if user is event organiser
     eventdata = condidi_db.get_event(db=db, eventid=data["eventid"])
-    clean_event_data(eventdata)
-    # print("eventdata:", eventdata)
-    result = {"success": "yes", "eventdict": eventdata}
+    if not eventdata:
+        result = {"success": "yes", "error": "eventid %s not found" % data["eventid"]}
+    else:
+        clean_event_data(eventdata)
+        # print("eventdata:", eventdata)
+        result = {"success": "yes", "eventdict": eventdata}
     return json.dumps(result)
 
 @post('/api/list_participants')

@@ -115,7 +115,7 @@ def get_event(db, eventid):
     try:
         eventdict = events.get(eventid)
     except:
-        eventdict = {}
+        eventdict = None
     return eventdict
 
 def create_user(db, userdata):
