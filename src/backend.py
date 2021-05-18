@@ -114,6 +114,12 @@ def clean_participant_data(participantlist):
 
 
 def check_input_data(data, required_fields):
+    """
+    Tool to sanitize input json
+    :param data: json to sanitize
+    :param required_fields: list of keys that must be in json
+    :return: True,none or False, errormessage as dict
+    """
     for item in required_fields:
         if item not in data:
             message = {"success": "no", "error": "%s missing" % item}
@@ -122,6 +128,11 @@ def check_input_data(data, required_fields):
 
 
 async def talk_to_jolocom(message):
+    """
+    helper routine to communicate with the jolocom service via websockets
+    :param message: message to send
+    :return: ssiresponse
+    """
     uri = "ws://" + JOLOCOM_URL
     async with websockets.connect(uri, timeout=10) as ws:
         await ws.send(json.dumps(message))
@@ -131,6 +142,10 @@ async def talk_to_jolocom(message):
 
 @route('/')
 def index():
+    """
+    fun
+    :return:
+    """
     name = 'you'
     return template('<b>Hello {{name}}</b>!', name=name)
 
@@ -217,6 +232,10 @@ def create_wallet_user():
 
 @post('/api/login_password')
 def login_password():
+    """
+    login via email and password
+    :return: success json with session token, or error json
+    """
     data = request.json
     print(data)
     # we need both email and password in the request, else fail.
@@ -238,6 +257,11 @@ def login_password():
 
 @post('/api/login_wallet')
 def login_wallet():
+    """
+    login with jolocom wallet. creates session token and the QRcode for login
+    :return:
+    """
+
     # no data needed
     response.content_type = 'application/json'
     # ask for credential
@@ -278,6 +302,10 @@ def login_wallet():
 
 @post('/api/logout')
 def logout():
+    """
+    log out. deletes session token from the database
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # we need a session token to log out
@@ -300,6 +328,10 @@ def logout():
 
 @post('/api/add_event')
 def add_event():
+    """
+    add an event to the database
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -328,6 +360,10 @@ def add_event():
 
 @post('/api/list_my_events')
 def list_my_events():
+    """
+    returns a list of all the events the user (identified by the session token) owns
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -354,6 +390,10 @@ def list_my_events():
 
 @post('/api/get_event')
 def get_event():
+    """
+    return data of a specific event
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -383,6 +423,10 @@ def get_event():
 
 @post('/api/list_participants')
 def list_participants():
+    """
+    list all participants of an event. Event must be owend by user
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -414,6 +458,10 @@ def list_participants():
 
 @post('/api/add_participant')
 def add_participant():
+    """
+    add an participant to an event
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -451,6 +499,10 @@ def add_participant():
 
 @post('/api/update_participant')
 def update_participant():
+    """
+    update participant data
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -477,6 +529,10 @@ def update_participant():
 
 @post('/api/remove_participant')
 def remove_participant():
+    """
+    remove participant from event
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
@@ -506,6 +562,11 @@ def remove_participant():
 
 @post('/api/issue_ticket')
 def issue_ticket():
+    """
+    issue ticket to attendent. for now it returns the interaction-token to generate the qr code. at a later
+    stage it will instead send the qr code and a deep link via email to attendend
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     passed, message = check_input_data(data, ["token", "eventid", "participantid"])
@@ -578,6 +639,10 @@ def issue_ticket():
 
 @post('/api/update_ticket')
 def update_ticket():
+    """
+    stump. idea is that at a later stage a ticket can be updated with new information
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     passed, message = check_input_data(data, ["token", "ticketdict"])
@@ -590,6 +655,11 @@ def update_ticket():
 
 @post('/api/get_checkin_token')
 def get_checkin_token():
+    """
+    get a participant specific token (QRcode) to check in a participant. This should be done on site with a tablet or
+    similar.
+    :return: qr code interaction token
+    """
     data = request.json
     response.content_type = 'application/json'
     passed, message = check_input_data(data, ["token", "eventid", "participantid"])
@@ -650,6 +720,10 @@ def get_checkin_token():
 
 @post('/api/wallet')
 def wallet_callback():
+    """
+    this is called by the ssi wallet. can handle different call backs
+    :return:
+    """
     data = request.json
     response.content_type = 'application/json'
     # all we get from the wallet, we send on to jolocom sdk, await response
