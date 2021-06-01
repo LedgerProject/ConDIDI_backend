@@ -115,7 +115,7 @@ def clean_participant_data(participantlist):
 
 def check_input_data(data, required_fields):
     """
-    Tool to sanitize input json
+    Tool to sanitize input json.
     :param data: json to sanitize
     :param required_fields: list of keys that must be in json
     :return: True,none or False, errormessage as dict
@@ -125,6 +125,17 @@ def check_input_data(data, required_fields):
             message = {"success": "no", "error": "%s missing" % item}
             return False, message
     return True, None
+
+
+def check_for_token(data):
+    """checks request for authorization header. if not, check data for token. returns token or None"""
+    token = None
+    try:
+        token = request.headers['Authorization']
+    except KeyError:
+        if "token" in data:
+            token = data["token"]
+    return token
 
 
 async def talk_to_jolocom(message):
@@ -309,11 +320,12 @@ def logout():
     data = request.json
     response.content_type = 'application/json'
     # we need a session token to log out
-    if "token" not in data:
+    token = check_for_token(data)
+    if not token:
         result = {"success": "no", "error": "session token missing"}
     else:
         try:
-            flag, dbreturn = condidi_sessiondb.close_session(db=redisdb, session_token=data["token"])
+            flag, dbreturn = condidi_sessiondb.close_session(db=redisdb, session_token=token)
         except Exception as e:
             print("warning, got execption while trying to close session:", e)
             result = {"success": "no", "error": "DB error"}
@@ -336,11 +348,14 @@ def add_event():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    passed, message = check_input_data(data, ["token", "eventdict"])
+    passed, message = check_input_data(data, ["eventdict"])
     if not passed:
         return message
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -368,11 +383,11 @@ def list_my_events():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    if "token" not in data:
-        result = {"success": "no", "error": "web session token missing"}
-        return result
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -402,11 +417,11 @@ def get_event():
         result = message
         return result
     # we need a valid token for this
-    if "token" not in data:
-        result = {"success": "no", "error": "web session token missing"}
-        return result
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -421,6 +436,7 @@ def get_event():
         result = {"success": "yes", "eventdict": eventdata}
     return json.dumps(result)
 
+
 @post('/api/list_participants')
 def list_participants():
     """
@@ -431,12 +447,15 @@ def list_participants():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    passed, message = check_input_data(data, ["token", "eventid"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["eventid"])
     if not passed:
         result = message
         return result
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -466,11 +485,14 @@ def add_participant():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    passed, message = check_input_data(data, ["token", "participantdict"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["participantdict"])
     if not passed:
         return message
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -507,11 +529,14 @@ def update_participant():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    passed, message = check_input_data(data, ["token", "participantdict", "participantid"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["participantdict", "participantid"])
     if not passed:
         return message
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -537,11 +562,14 @@ def remove_participant():
     response.content_type = 'application/json'
     # possible event data fields see condidi_db.py Event class
     # we need a valid token for this
-    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["eventid", "participantid"])
     if not passed:
         return message
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -569,13 +597,16 @@ def issue_ticket():
     """
     data = request.json
     response.content_type = 'application/json'
-    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["eventid", "participantid"])
     if not passed:
         return message
     eventid = data["eventid"]
     participantid = data["participantid"]
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -602,7 +633,8 @@ def issue_ticket():
     claims["about"] = eventdict["subject"]
     claims["time"] = eventdict["date"]
     claims["location"] = eventdict["address"]
-    #          "name": "Event Name", "presenter": "John Example", "about": "A event discussing topic X", "time": "2021-03-15T13:14:03.836",
+    #          "name": "Event Name", "presenter": "John Example", "about": "A event discussing topic X",
+    #          "time": "2021-03-15T13:14:03.836",
     #      "location": "Conference center X"
     myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
                                                         credentialtype="EventInvitationCredential",
@@ -645,7 +677,10 @@ def update_ticket():
     """
     data = request.json
     response.content_type = 'application/json'
-    passed, message = check_input_data(data, ["token", "ticketdict"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["ticketdict"])
     if not passed:
         return message
     # TODO jolocom interaction
@@ -662,13 +697,16 @@ def get_checkin_token():
     """
     data = request.json
     response.content_type = 'application/json'
-    passed, message = check_input_data(data, ["token", "eventid", "participantid"])
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    passed, message = check_input_data(data, ["eventid", "participantid"])
     if not passed:
         return message
     eventid = data["eventid"]
     participantid = data["participantid"]
     # check session
-    status, userid = condidi_sessiondb.check_session(redisdb, data["token"])
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -857,6 +895,7 @@ def wallet_callback():
     elif interactiondict['type'] == 'issue_ticket':
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # save credential for later
+            credentialid = None
             for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
                 credentialid = credential["id"]
                 status, credentildata = condidi_db.add_credential(db, credentialid=credentialid,
