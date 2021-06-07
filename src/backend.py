@@ -260,7 +260,7 @@ def create_wallet_user():
     if DEVELOPMENT:
         generate_qr(message["result"]["interactionToken"])
     # save interaction data so we don't loose the information
-    interactiondict = {'type': 'create_wallet_user', 'name': data["first_name"] +" "+ data["last_name"], 'email': data['email']}
+    interactiondict = {'type': 'create_wallet_user', 'first_name': data["first_name"], "last_name": data["last_name"], 'email': data['email']}
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
     return json.dumps(result)
@@ -872,7 +872,8 @@ def wallet_callback():
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # all clear, get user did, create user, save credential, delete interaction
             did = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
-            userdict = {"name": interactiondict["name"], "email": interactiondict["email"], "did": did}
+            userdict = {"first_name": interactiondict["first_name"],"last_name": interactiondict["last_name"],
+                        "email": interactiondict["email"], "did": did}
             status, userdata = condidi_db.create_user(db, userdata=userdict)
             if not status:
                 if DEVELOPMENT:
