@@ -94,6 +94,11 @@ class TestUsers(unittest.TestCase):
         result = r.json()
         # print(result)
         self.assertEqual(result["success"], "yes")
+        # get user profile
+        r = requests.post('http://localhost:8080/api/get_user_profile', json=sessiondict)
+        result = r.json()
+        self.assertEqual(result["success"], "yes")
+        print(result["userdata"])
         r = requests.post('http://localhost:8080/api/logout', json=sessiondict)
         result = r.json()
         self.assertEqual(result["success"], "yes")

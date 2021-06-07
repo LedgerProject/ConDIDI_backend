@@ -113,6 +113,23 @@ def clean_participant_data(participantlist):
             mydict.pop("_rev")
 
 
+def clean_user_data(userlist):
+    """
+    Will remove arangoDB internal keys from list in place
+    :param:
+    :return:
+    """
+    if not isinstance(userlist, list):
+        userlist = [userlist]
+    if len(userlist) > 0:
+        for mydict in userlist:
+            mydict["userid"] = mydict["_key"]
+            mydict.pop("_key")
+            mydict.pop("_id")
+            mydict.pop("_rev")
+            mydict.pop("password")
+    return userlist
+
 def check_input_data(data, required_fields):
     """
     Tool to sanitize input json.
@@ -171,7 +188,11 @@ def create_user():
     data = get_data()
     response.content_type = 'application/json'
     # check data structure.
-    passed, message = check_input_data(data, ["email", "name", "password"])
+    # clean database specific keys
+    for key in data:
+        if key[0] == "_":
+            data.pop[key]
+    passed, message = check_input_data(data, ["email", "password"])
     if not passed:
         result = message
     else:
@@ -195,7 +216,11 @@ def create_wallet_user():
     if "password" in data:
         data.pop("password")
     # check data structure.
-    passed, message = check_input_data(data, ["email", "name"])
+    # clean database specific keys
+    for key in data:
+        if key[0] == "_":
+            data.pop[key]
+    passed, message = check_input_data(data, ["email"])
     if not passed:
         result = message
         return json.dumps(result)
@@ -208,7 +233,7 @@ def create_wallet_user():
     # userid = newuser["_key"]
     # if DEVELOPMENT:
     #     print(userid)
-    claims = {"Name": data["name"], "email": data["email"]}
+    claims = {"Name": data["first_name"] +" "+ data["last_name"], "email": data["email"]}
     if DEVELOPMENT:
         print(CALLBACK_URL)
     # request token for wallet from jolocom
@@ -235,9 +260,41 @@ def create_wallet_user():
     if DEVELOPMENT:
         generate_qr(message["result"]["interactionToken"])
     # save interaction data so we don't loose the information
-    interactiondict = {'type': 'create_wallet_user', 'name': data['name'], 'email': data['email']}
+    interactiondict = {'type': 'create_wallet_user', 'name': data["first_name"] +" "+ data["last_name"], 'email': data['email']}
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
+    return json.dumps(result)
+
+
+@post('/api/get_user_profile')
+def get_user_profile():
+    """
+    returns the profile of the user (identified by the session token)
+    :return:
+    """
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    # we need a valid token for this
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
+    print(status)
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # token valid, and we have a userid
+    # find user info with userid
+    matchdict = dict()
+    matchdict["_key"] = userid
+    # add event to database. Bad fieldnames will automatically removed
+    status, userdata = condidi_db.find_user(db=db, matchdict=matchdict)
+    print(userdata)
+    userdata = clean_user_data(userdata)
+    print(userdata)
+    result = {"success": "yes", "userdata": userdata[0]}
     return json.dumps(result)
 
 
@@ -942,6 +999,7 @@ if __name__ == '__main__':
         DEVELOPMENT = os.environ["DEVELOPMENT"]
     else:
         DEVELOPMENT = "True"
+        print("Development mode, no gevent")
     if "JOLOCOM_URL" in os.environ:
         JOLOCOM_URL = os.environ["JOLOCOM_URL"]
     else:
