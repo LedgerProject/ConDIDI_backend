@@ -13,9 +13,10 @@ class Event(dict):
         define the keys we want to have in the event document
         """
         super().__init__()
-        self.allowed_keys = ["name", "type", "subject","presenter", "venue information", "address", "url", "organiser institution",
-                             "contact person name", "contact person email", "submission deadline",
-                             "registration deadline", "date", "organiser userid"]
+        self.allowed_keys = ["name", "type", "subject", "schedule", "presenter", "venue information", "address", "url", "organiser institution",
+                             "contact", "submission deadline",
+                             "registration deadline", "date", "time", "organiser userid",  "attendance_confirmation", "time_registration_deadline",
+                             "venue"]
         if not noinit:
             for key in self.allowed_keys:
                 self[key] = None
