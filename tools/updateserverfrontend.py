@@ -12,15 +12,15 @@ def do_update():
     out += result.stderr.replace("\n","<br>")
     print(result.stdout)
     #result = subprocess.run(["npm", "install", "--force"], timeout=120, capture_output=True, text=True, cwd=DIRNAME)
-    result = subprocess.run(["yarn", "install"], timeout=120, capture_output=True, text=True, cwd=DIRNAME)
+    result = subprocess.run(["yarn", "install"], timeout=360, capture_output=True, text=True, cwd=DIRNAME)
     out += result.stdout.replace("\n","<br>")
     out += result.stderr.replace("\n","<br>")
     print(result.stdout)
-    result = subprocess.run(["yarn", "build"], timeout=120, capture_output=True, text=True, cwd=DIRNAME)
+    result = subprocess.run(["yarn", "build"], timeout=240, capture_output=True, text=True, cwd=DIRNAME)
     out += result.stdout.replace("\n","<br>")
     out += result.stderr.replace("\n","<br>")
     print(result.stdout)
-    result = subprocess.run("cp -r dist/* /var/www/html/condidi/", timeout=30, capture_output=True,
+    result = subprocess.run("cp -r dist/* /var/www/html/condidi/", timeout=60, capture_output=True,
                             shell=True, text=True, cwd=DIRNAME)
     out += result.stdout.replace("\n","<br>")
     out += result.stderr.replace("\n","<br>")
