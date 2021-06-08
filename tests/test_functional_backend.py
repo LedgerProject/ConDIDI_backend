@@ -89,16 +89,18 @@ class TestUsers(unittest.TestCase):
         self.assertEqual(result["success"], "yes")
         token = result["token"]
         # print(token)
+        # print(result)
+        # get user profile
+        sessiondict = {"token": token}
+        r = requests.post('http://localhost:8080/api/get_user_profile', json=sessiondict)
+        result = r.json()
+        print(result)
+        self.assertEqual(result["success"], "yes")
+        print(result["userdata"])
         sessiondict = {"token": token}
         r = requests.post('http://localhost:8080/api/logout', json=sessiondict)
         result = r.json()
-        # print(result)
         self.assertEqual(result["success"], "yes")
-        # get user profile
-        r = requests.post('http://localhost:8080/api/get_user_profile', json=sessiondict)
-        result = r.json()
-        self.assertEqual(result["success"], "yes")
-        print(result["userdata"])
         r = requests.post('http://localhost:8080/api/logout', json=sessiondict)
         result = r.json()
         self.assertEqual(result["success"], "yes")
@@ -150,7 +152,7 @@ class TestUsers(unittest.TestCase):
         self.assertEqual(result["success"], "yes")
         token = result["token"]
         # add events
-        eventdict = {"name": "event with participants", "url": "http://nada", "error": "False", "organiser userid": 0}
+        eventdict = {"name": "event with participants", "url": "http://nada", "error": "False", "organiser_userid": 0}
         calldict = {"token": token, "eventdict": eventdict}
         r = requests.post('http://localhost:8080/api/add_event', json=calldict)
         result = r.json()
@@ -163,9 +165,9 @@ class TestUsers(unittest.TestCase):
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["participants"]), 0)
         # add participant
-        participantdict = {"name": "Testuser", "email": "testuser@test.invalid", "did":"12345", "payment status": "paid",
-                           "attendence status": "registered", "participation": "speaker",
-                             "signup date": "2021-01-01", "ticket id":None, "credential id": None}
+        participantdict = {"name": "Testuser", "email": "testuser@test.invalid", "did":"12345", "payment_status": "paid",
+                           "attendence_status": "registered", "participation": "speaker",
+                             "signup_date": "2021-01-01", "ticket_id":None, "credential_id": None}
         calldict = {"token": token, "eventid": eventid, "participantdict": participantdict}
         r = requests.post('http://localhost:8080/api/add_participant', json=calldict)
         result = r.json()
@@ -177,7 +179,7 @@ class TestUsers(unittest.TestCase):
         result = r.json()
         self.assertEqual(result["success"], "yes")
         self.assertEqual(len(result["participants"]), 1)
-        participantdict = {"attendence status": "no-show"}
+        participantdict = {"attendence_status": "no-show"}
         calldict = {"token": token, "eventid": eventid, "participantdict": participantdict, "participantid": participantid }
         r = requests.post('http://localhost:8080/api/update_participant', json=calldict)
         result = r.json()

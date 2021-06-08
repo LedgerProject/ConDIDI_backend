@@ -13,9 +13,9 @@ class Event(dict):
         define the keys we want to have in the event document
         """
         super().__init__()
-        self.allowed_keys = ["name", "type", "subject", "schedule", "presenter", "venue information", "address", "url", "organiser institution",
-                             "contact", "submission deadline",
-                             "registration deadline", "date", "time", "organiser userid",  "attendance_confirmation", "time_registration_deadline",
+        self.allowed_keys = ["name", "type", "subject", "schedule", "presenter", "venue_information", "address", "url", "organiser_institution",
+                             "contact", "submission_deadline",
+                             "registration_deadline", "date", "time", "organiser_userid",  "attendance_confirmation", "time_registration_deadline",
                              "venue"]
         if not noinit:
             for key in self.allowed_keys:
@@ -41,8 +41,8 @@ class Participant(dict):
         a condidi userid, it is noted in the userid field, otherwise it is None.
         """
         super().__init__()
-        self.allowed_keys = ["userid", "name", "email", "did", "payment status", "attendence status", "participation",
-                             "signup date", "ticket id", "ticked issued", "credential id"]
+        self.allowed_keys = ["userid", "name", "email", "did", "payment_status", "attendence_status", "participation",
+                             "signup_date", "ticket_id", "ticked_issued", "credential_id"]
         if not noinit:
             for key in self.allowed_keys:
                 self[key] = None
@@ -450,7 +450,7 @@ class TestDatabase(unittest.TestCase):
         # test create event
         print("event dict")
         myevent = Event()
-        eventdict = {"name": "test event", "url": "http://nada", "error": "False", "organiser userid": 0}
+        eventdict = {"name": "test event", "url": "http://nada", "error": "False", "organiser_userid": 0}
         badkeys = myevent.load(eventdict)
         self.assertEqual(badkeys, ["error"])
         self.assertEqual(len(myevent.keys()), len(myevent.allowed_keys))
@@ -465,7 +465,7 @@ class TestDatabase(unittest.TestCase):
         result = get_event(db, eventid)
         print(result)
         print("find events")
-        result = find_events(db, {"organiser userid": 0})
+        result = find_events(db, {"organiser_userid": 0})
         print(result)
         print("delete test database")
         self.assertTrue(sys_db.delete_database('test'))
@@ -486,7 +486,7 @@ class TestDatabase(unittest.TestCase):
         # test create event
         #print("event dict")
         myevent = Event()
-        eventdict = {"name": "test event1", "url": "http://nada", "error": "False", "organiser userid": 0}
+        eventdict = {"name": "test event1", "url": "http://nada", "error": "False", "organiser_userid": 0}
         #badkeys = myevent.load(eventdict)
         #self.assertEqual(badkeys, ["error"])
         #self.assertEqual(len(myevent.keys()), len(myevent.allowed_keys))

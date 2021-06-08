@@ -419,7 +419,7 @@ def add_event():
     # token valid, and we have a userid
     # set organiser id to userid
     eventdict = data["eventdict"]
-    eventdict["organiser userid"] = userid
+    eventdict["organiser_userid"] = userid
     # add event to database. Bad fieldnames will automatically removed
     status, eventdata = condidi_db.create_event(db=db, neweventdata=eventdict)
     clean_event_data([eventdata])
@@ -451,7 +451,7 @@ def list_my_events():
     # token valid, and we have a userid
     # set organiser id to userid
     matchdict = dict()
-    matchdict["organiser userid"] = userid
+    matchdict["organiser_userid"] = userid
     # add event to database. Bad fieldnames will automatically removed
     eventdata = condidi_db.find_events(db=db, matchdict=matchdict)
     clean_event_data(eventdata)
@@ -521,7 +521,7 @@ def list_participants():
     eventid = data["eventid"]
     # get event data
     eventdict = condidi_db.get_event(db, eventid)
-    organiserid = eventdict["organiser userid"]
+    organiserid = eventdict["organiser_userid"]
     if not userid == organiserid:
         result = {"success": "no", "error": "you are not the organiser of this event"}
         return result
@@ -564,7 +564,7 @@ def add_participant():
             # first check if the user is the event owner
             # get event data
             eventdict = condidi_db.get_event(db, data["eventid"])
-            organiserid = eventdict["organiser userid"]
+            organiserid = eventdict["organiser_userid"]
             if not userid == organiserid:
                 result = {"success": "no", "error": "you are not the organiser of this event",
                           "participantid": participantid}
@@ -633,7 +633,7 @@ def remove_participant():
     # first check if the user is the event owner
     # get event data
     eventdict = condidi_db.get_event(db, data["eventid"])
-    organiserid = eventdict["organiser userid"]
+    organiserid = eventdict["organiser_userid"]
     if not userid == organiserid:
         result = {"success": "no", "error": "you are not the organiser of this event"}
         return result
@@ -673,7 +673,7 @@ def issue_ticket():
     if not eventdict:
         result = {"success": "no", "error": "no such event"}
         return result
-    organiserid = eventdict["organiser userid"]
+    organiserid = eventdict["organiser_userid"]
     if not userid == organiserid:
         result = {"success": "no", "error": "you are not the organiser of this event"}
         return result
@@ -773,7 +773,7 @@ def get_checkin_token():
     if not eventdict:
         result = {"success": "no", "error": "no such event"}
         return result
-    organiserid = eventdict["organiser userid"]
+    organiserid = eventdict["organiser_userid"]
     if not userid == organiserid:
         result = {"success": "no", "error": "you are not the organiser of this event"}
         return result
@@ -944,7 +944,7 @@ def wallet_callback():
             #    # actually, there is nothing in the credential as of now that is an eventid
             #    # no point in checking anything
             # participant als anwesend markieren
-            condidi_db.update_participant(db, {"participantid": participantid, "attendence status": "attended"})
+            condidi_db.update_participant(db, {"participantid": participantid, "attendence_status": "attended"})
             # eventuell credential rausschicken?
             response.status = 200
             if DEVELOPMENT:
