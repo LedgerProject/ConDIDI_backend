@@ -218,7 +218,13 @@ class TestUsers(unittest.TestCase):
         result = r.json()
         print(result)
         self.assertEqual(result["success"], "yes")
-        #
+        # delete event
+        print("remove event")
+        calldict = {"token": token, "eventid": eventid}
+        r = requests.post('http://localhost:8080/api/delete_event', json=calldict)
+        result = r.json()
+        print(result)
+        self.assertEqual(result["success"], "yes")
 
 unittest.addModuleCleanup(tearDownModule)
 

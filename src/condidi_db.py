@@ -120,6 +120,14 @@ def get_event(db, eventid):
     return eventdict
 
 
+def delete_event(db, eventid):
+    events = db.collection("events")
+    try:
+        events.delete(eventid)
+    except arango.execptions.DocumentDeleteError:
+        return False, "event not found"
+    return True, None
+
 def create_user(db, userdata):
     # userdata = {"name": name, "email":email, "did":did, "password":password, "signupdate": signupdate iso}
     users = db.collection("users")

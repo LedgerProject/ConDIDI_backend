@@ -506,6 +506,51 @@ def get_event():
     return json.dumps(result)
 
 
+@post('/api/delete_event')
+def delete_event():
+    """
+    delets an event if there are no participants
+    :return:
+    """
+    data = request.json
+    response.content_type = 'application/json'
+    # possible event data fields see condidi_db.py Event class
+    # possible event data fields see condidi_db.py Event class
+    passed, message = check_input_data(data, ["eventid"])
+    if not passed:
+        result = message
+        return result
+    # we need a valid token for this
+    token = check_for_token(data)
+    if not token:
+        return {"success": "no", "error": "session token missing"}
+    # check session
+    status, userid = condidi_sessiondb.check_session(redisdb, token)
+    if not status:
+        result = {"success": "no", "error": "no such session"}
+        return result
+    # token valid, and we have a userid
+    eventid = data["eventid"]
+    # set organiser id to userid
+    matchdict = dict()
+    matchdict["organiser_userid"] = userid
+    # add event to database. Bad fieldnames will automatically removed
+    eventdata = condidi_db.find_events(db=db, matchdict=matchdict)
+    # check if owner of event
+    print("eventdata", eventdata)
+    myevents = [event["_key"] for event in eventdata]
+    if eventid not in myevents:
+        result = {"success": "no", "error": "event does not belong to user"}
+        return result
+    # all fine, we can delete event
+    # TODO check if all participants are removed first
+    status, result = condidi_db.delete_event(db=db, eventid=eventid)
+    if status:
+        result = {"success": "yes"}
+    else:
+        result = {"success": "no", "error": "event could not be removed from db"}
+    return json.dumps(result)
+
 @post('/api/list_participants')
 def list_participants():
     """
