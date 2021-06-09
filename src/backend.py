@@ -70,11 +70,13 @@ def generate_qr(data):
 # accept data as json or data dict
 def get_data():
     if request.json:
-        print("Request is json")
+        if DEVELOPMENT:
+            print("Request is json")
         return request.json
     else:
         # its a form dict, we need to unpack
-        print("Request is form")
+        if DEVELOPMENT:
+            print("Request is form")
         result = dict()
         for key in request.POST.dict:
             result[key] = request.POST.dict[key][0]
@@ -95,6 +97,7 @@ def clean_event_data(eventlist):
             mydict.pop("_key")
             mydict.pop("_id")
             mydict.pop("_rev")
+    return eventlist
 
 
 def clean_participant_data(participantlist):
@@ -111,7 +114,7 @@ def clean_participant_data(participantlist):
             mydict.pop("_key")
             mydict.pop("_id")
             mydict.pop("_rev")
-
+    return participantlist
 
 def clean_user_data(userlist):
     """
@@ -200,7 +203,11 @@ def create_user():
         if not status:
             result = {"success": "no", "error": "email exists"}
         else:
-            result = {"success": "yes", "error": ""}
+            # get data from new user
+            userid = newuser["_key"]
+            userdata = condidi_db.get_user(db=db, userid=userid)
+            userdata = clean_user_data(userdata)
+            result = {"success": "yes", "error": "", "userdict": userdata[0]}
     return json.dumps(result)
 
 
@@ -294,7 +301,7 @@ def get_user_profile():
     print(userdata)
     userdata = clean_user_data(userdata)
     print(userdata)
-    result = {"success": "yes", "userdata": userdata[0]}
+    result = {"success": "yes", "userdict": userdata[0]}
     return json.dumps(result)
 
 
@@ -422,11 +429,16 @@ def add_event():
     eventdict["organiser_userid"] = userid
     # add event to database. Bad fieldnames will automatically removed
     status, eventdata = condidi_db.create_event(db=db, neweventdata=eventdict)
-    clean_event_data([eventdata])
-    if status:
-        result = {"success": "yes", "eventdict": eventdata}
+    if not status:
+        result = {"success": "no", "error": "add event in db failed"}
+        return json.dumps(result)
+    eventdata = condidi_db.get_event(db=db, eventid=eventdata["_key"])
+    if not eventdata:
+        result = {"success": "yes", "error": "eventid %s not found" % data["eventid"]}
     else:
-        result = {"success": "no", "error": eventdata}
+        eventdata = clean_event_data(eventdata)
+        # print("eventdata:", eventdata)
+        result = {"success": "yes", "eventdict": eventdata[0]}
     return json.dumps(result)
 
 
@@ -455,7 +467,7 @@ def list_my_events():
     # add event to database. Bad fieldnames will automatically removed
     eventdata = condidi_db.find_events(db=db, matchdict=matchdict)
     clean_event_data(eventdata)
-    print(eventdata)
+    #print(eventdata)
     result = {"success": "yes", "eventlist": eventdata}
     return json.dumps(result)
 
@@ -488,9 +500,9 @@ def get_event():
     if not eventdata:
         result = {"success": "yes", "error": "eventid %s not found" % data["eventid"]}
     else:
-        clean_event_data(eventdata)
-        # print("eventdata:", eventdata)
-        result = {"success": "yes", "eventdict": eventdata}
+        eventdata = clean_event_data(eventdata)
+        #print("eventdata:", eventdata)
+        result = {"success": "yes", "eventdict": eventdata[0]}
     return json.dumps(result)
 
 
@@ -527,7 +539,7 @@ def list_participants():
         return result
     # add event to database. Bad fieldnames will automatically removed
     participants = condidi_db.list_participants(db=db, eventid=eventid)
-    clean_participant_data(participants)
+    participants = clean_participant_data(participants)
     result = {"success": "yes", "participants": participants}
     return json.dumps(result)
 
@@ -557,7 +569,6 @@ def add_participant():
     participantdict = data["participantdict"]
     result = condidi_db.create_participant(db, participantdict)
     participantid = result["_key"]
-    result = {"success": "yes", "error": "", "participantid": participantid}
     # if we have an eventid, also add participant to event
     if "eventid" in data:
         if data["eventid"]:
@@ -573,6 +584,10 @@ def add_participant():
             if not status:
                 result = {"success": "no", "error": "could not add participant to event",
                           "participantid": participantid}
+    # get participant data so we can return it
+    result = condidi_db.get_participant(db, participantid)
+    participantlist = clean_participant_data(result)
+    result = {"success": "yes", "error": "", "participantdict": participantlist[0], "participantid": participantid}
     return result
 
 
@@ -602,10 +617,12 @@ def update_participant():
     participantdict["participantid"] = data["participantid"]
     status, result = condidi_db.update_participant(db, participantdict)
     if not status:
-        result = {"success": "no", "error": result}
+        result = {"success": "no", "error": "update failed"}
         return result
-    clean_participant_data(result)
-    result = {"success": "yes", "error": ""}
+    # get participant data so we can return it
+    result = condidi_db.get_participant(db, result["_key"])
+    participantlist = clean_participant_data(result)
+    result = {"success": "yes", "error": "", "participantdict": participantlist[0]}
     return result
 
 

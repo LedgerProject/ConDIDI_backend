@@ -41,7 +41,7 @@ class Participant(dict):
         a condidi userid, it is noted in the userid field, otherwise it is None.
         """
         super().__init__()
-        self.allowed_keys = ["userid", "name", "email", "did", "payment_status", "attendence_status", "participation",
+        self.allowed_keys = ["userid", "first_name", "last_name", "email", "did", "payment_status", "attendence_status", "participation",
                              "signup_date", "ticket_id", "ticked_issued", "credential_id"]
         if not noinit:
             for key in self.allowed_keys:
@@ -119,6 +119,7 @@ def get_event(db, eventid):
         eventdict = None
     return eventdict
 
+
 def create_user(db, userdata):
     # userdata = {"name": name, "email":email, "did":did, "password":password, "signupdate": signupdate iso}
     users = db.collection("users")
@@ -140,6 +141,7 @@ def create_user(db, userdata):
     result = users.insert(userdata)
     return True, result
 
+
 def find_user(db, matchdict):
      users = db.collection("users")
      matched = users.find(matchdict, skip=0, limit=1)
@@ -147,6 +149,16 @@ def find_user(db, matchdict):
          return False, None
      userdata = [item for item in matched.batch()]
      return True, userdata[0]
+
+
+def get_user(db, userid):
+    users = db.collection("users")
+    try:
+        userdict = users.get(userid)
+    except:
+        userdict = None
+    return userdict
+
 
 def list_participants(db, eventid):
     """
