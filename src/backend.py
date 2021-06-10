@@ -292,7 +292,7 @@ def get_user_profile():
         return {"success": "no", "error": "session token missing"}
     # check session
     status, userid = condidi_sessiondb.check_session(redisdb, token)
-    print(status)
+    #print(status)
     if not status:
         result = {"success": "no", "error": "no such session"}
         return result
@@ -302,9 +302,9 @@ def get_user_profile():
     matchdict["_key"] = userid
     # add event to database. Bad fieldnames will automatically removed
     status, userdata = condidi_db.find_user(db=db, matchdict=matchdict)
-    print(userdata)
+    #print(userdata)
     userdata = clean_user_data(userdata)
-    print(userdata)
+    #print(userdata)
     result = {"success": "yes", "userdict": userdata[0]}
     return json.dumps(result)
 
@@ -316,7 +316,7 @@ def login_password():
     :return: success json with session token, or error json
     """
     data = request.json
-    print(data)
+    #print(data)
     # we need both email and password in the request, else fail.
     passed, message = check_input_data(data, ["email", "password"])
     if not passed:
@@ -541,7 +541,7 @@ def delete_event():
     # add event to database. Bad fieldnames will automatically removed
     eventdata = condidi_db.find_events(db=db, matchdict=matchdict)
     # check if owner of event
-    print("eventdata", eventdata)
+    #print("eventdata", eventdata)
     myevents = [event["_key"] for event in eventdata]
     if eventid not in myevents:
         result = {"success": "no", "error": "event does not belong to user"}

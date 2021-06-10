@@ -392,7 +392,7 @@ def check_pass(db, password, user_email=None, userid=None):
     try:
         passcheck = bcrypt.checkpw(password.encode('utf8'), user_hash.encode('utf8'))
     except ValueError as e:
-        print(e)
+        #print(e)
         return False, None
     if passcheck:
         # password correct
