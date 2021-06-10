@@ -15,7 +15,7 @@ import configparser
 import jolocom_backend
 import qrcode
 import datetime
-
+import condidi_email
 
 # TODO at the moment participants are independent of events. this needs more thinking.
 # all routes will be api based I guess
@@ -1059,6 +1059,10 @@ if __name__ == '__main__':
         SSI_DID = config["ssi"]["did"].strip('\"')
         print("Callback url: -%s-" % CALLBACK_URL)
         print("SSI DID: -%s-" % SSI_DID)
+        SMTP_SERVER = config["mail"]["smtp_server"].strip('\"')
+        SMTP_PORT = config["mail"]["smtp_port"].strip('\"')
+        SMTP_USER = config["mail"]["smtp_user"].strip('\"')
+        SMTP_PASSWORD = config["mail"]["smtp_password"].strip('\"')
     else:
         print("Warning! config.ini missing. Wallet connection will not work!")
     # start server
