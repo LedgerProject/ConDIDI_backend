@@ -153,8 +153,12 @@ def check_for_token(data):
     try:
         token = request.headers['Authorization']
     except KeyError:
-        if "token" in data:
-            token = data["token"]
+        if data:
+            try:
+                if "token" in data:
+                    token = data["token"]
+            except KeyError:
+                pass
     return token
 
 
