@@ -790,12 +790,12 @@ def issue_ticket():
     status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
                                                              "ticked issued": datetime.date.today().isoformat()})
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
-    emailcontent = condidi_email.MsgTicket(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
+    emailmsg = condidi_email.MsgTicket(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
                                            event=eventdict["name"], webtoken=message["result"]["interactionToken"])
     try:
         # TODO put this into a thread.
         condidi_email.send_email(myemail=SMTP_USER, mypass=SMTP_PASSWORD, mailserver=SMTP_SERVER,
-                             port=SMTP_PORT, content=emailcontent, email=participantdict["email"] )
+                             port=SMTP_PORT, message=emailmsg, email=participantdict["email"] )
     except Exception as e:
         print("could not send email: %s" % e)
     return json.dumps(result)
