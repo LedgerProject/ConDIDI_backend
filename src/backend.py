@@ -31,7 +31,7 @@ def enable_cors_generic_route():
     NOTE: This means we won't 404 any invalid path that is an OPTIONS request.
     """
     add_cors_headers()
-
+    return None
 
 @hook('after_request')
 def enable_cors_after_request_hook():
@@ -45,7 +45,7 @@ def enable_cors_after_request_hook():
 def add_cors_headers():
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token, Access-Control-Allow-Headers, Origin, X-Requested-With, Authorization'
 
 
 # end CORS compatibility snippet
@@ -274,6 +274,8 @@ def create_wallet_user():
     interactiondict = {'type': 'create_wallet_user', 'first_name': data["first_name"], "last_name": data["last_name"], 'email': data['email']}
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
+    if DEVELOPMENT:
+        print(result)
     return json.dumps(result)
 
 
@@ -788,7 +790,14 @@ def issue_ticket():
     status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
                                                              "ticked issued": datetime.date.today().isoformat()})
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
-    # todo email versenden an participantemail
+    emailcontent = condidi_email.MsgTicket(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
+                                           event=eventdict["name"], webtoken=message["result"]["interactionToken"])
+    try:
+        # TODO put this into a thread.
+        condidi_email.send_email(myemail=SMTP_USER, mypass=SMTP_PASSWORD, mailserver=SMTP_SERVER,
+                             port=SMTP_PORT, content=emailcontent, email=participantdict["email"] )
+    except Exception as e:
+        print("could not send email: %s" % e)
     return json.dumps(result)
 
 
