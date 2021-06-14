@@ -844,7 +844,7 @@ def issue_ticket():
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     # mark ticket as issued
     status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
-                                                             "ticked issued": datetime.date.today().isoformat()})
+                                                             "ticked_issued": datetime.date.today().isoformat()})
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
     emailmsg = condidi_email.MsgTicket(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
                                            event=eventdict["name"], webtoken=message["result"]["interactionToken"])
@@ -1101,7 +1101,7 @@ def wallet_callback():
             # right now I don't really care if the credential was saved
             # add ticket id
             status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
-                                                                     "ticket id": credentialid, "did": participantdid})
+                                                                     "ticket_id": credentialid, "did": participantdid})
             # delete interaction
             status = condidi_db.delete_interaction(db, interactionid=interactionid)
             # finally send back the credential to wallet
@@ -1112,7 +1112,10 @@ def wallet_callback():
             # testing
             # send out request for proof of attendace
             # TODO: request PaA only after the event, by some way of cron job
-            request_proof_of_attendance(eventid=interactiondict["eventid"], participantid=interactiondict["participantid"])
+            try:
+                request_proof_of_attendance(eventid=interactiondict["eventid"], participantid=interactiondict["participantid"])
+            except Exception as e:
+                print(e)
             # return None
             return json.dumps(myresponse)
     elif interactiondict['type'] == 'proof_of_attendance':
