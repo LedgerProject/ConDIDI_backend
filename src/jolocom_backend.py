@@ -72,7 +72,7 @@ class AuthenticationFlow(dict):
     def __init__(self, callbackurl, description, interactionid=None):
         super().__init__()
         self["jsonrpc"] = "2.0"
-        self["method"] = "authentication"
+        self["method"] = "initiateAuthentication"
         self["params"] = {"callbackURL": callbackurl,
                           "descritpion": description}
         if not interactionid:
