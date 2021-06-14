@@ -1106,10 +1106,14 @@ if __name__ == '__main__':
         # do the websocket dance
         if DEVELOPMENT:
             print(myrequest)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
-        loop.close()
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+            loop.close()
+        except TimeoutError:
+            print("timeout, will ignore")
+            pass
     # create tempdir
     TEMPDIR = tempfile.mkdtemp()
     # connect to databases
