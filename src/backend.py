@@ -1076,6 +1076,7 @@ def wallet_callback():
                         print("to wallet: ")
                     return ""
     elif interactiondict['type'] == 'checkin_token':
+        print("it is the wallet response to checkin token")
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # all
             eventid = interactiondict["eventid"]
@@ -1093,6 +1094,7 @@ def wallet_callback():
                 print("to wallet: ")
             return ""
     elif interactiondict['type'] == 'issue_ticket':
+        print("it is the wallet response to issue ticket")
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # save credential for later
             credentialid = None
@@ -1130,7 +1132,7 @@ def wallet_callback():
             credentialid = None
             # get DID of the person with the ticket
             participantdid = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
-            credentialid = hashlib.blake2b(data, digest_size=20).hexdigest()
+            credentialid = hashlib.blake2b(str(data).encode('utf-8'), digest_size=20).hexdigest()
             status, credentildata = condidi_db.add_credential(db, credentialid=credentialid,
                                                                   credentialdict=data)
             # right now I don't really care if the credential was saved
