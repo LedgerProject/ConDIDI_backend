@@ -641,6 +641,11 @@ def add_participant():
     result = condidi_db.get_participant(db, participantid)
     participantlist = clean_participant_data(result)
     result = {"success": "yes", "error": "", "participantdict": participantlist[0], "participantid": participantid}
+    # TODO: remove after demo
+    # immediately issue ticket
+    request.json["participantid"]=participantid
+    issue_ticket()
+    # TODO
     return result
 
 
