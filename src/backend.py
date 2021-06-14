@@ -960,8 +960,8 @@ def wallet_callback():
     this is called by the ssi wallet. can handle different call backs
     :return:
     """
-    print("data from wallet:", data)
     data = request.json
+    print("data from wallet:", data)
     response.content_type = 'application/json'
     # all we get from the wallet, we send on to jolocom sdk, await response
     if DEVELOPMENT:
