@@ -46,7 +46,7 @@ class MsgTicket(object):
         If it has reached you in error, please let us know.</p>
         </body>
         </html>
-        """  %(firstname,lastname,event,deeplink, deeplink)
+        """  %(firstname,lastname,event,deeplink)
         self.subject = "Your ticket for %s" % event
 
 

@@ -51,3 +51,18 @@ class InitiateCredentialRequest(dict):
         return json.dumps(self)
 
 
+class UpdatePublicProfile(dict):
+    def __init__(self, name, description, image, url, interactionid=None):
+        super().__init__()
+        self["jsonrpc"] = "2.0"
+        self["method"] = "updatePublicProfile"
+        self["params"] = {"name": name,
+                          "description": description,
+                          "image": image,
+                          "url": url}
+        if not interactionid:
+            interactionid = secrets.token_urlsafe(32)
+        self["id"] = interactionid
+
+    def json(self):
+        return json.dumps(self)

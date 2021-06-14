@@ -1080,6 +1080,11 @@ if __name__ == '__main__':
         SMTP_PORT = config["mail"]["smtp_port"].strip('\"')
         SMTP_USER = config["mail"]["smtp_user"].strip('\"')
         SMTP_PASSWORD = config["mail"]["smtp_password"].strip('\"')
+        SSI_NAME = config["ssi"]["name"].strip('\"')
+        SSI_URL = config["ssi"]["url"].strip('\"')
+        SSI_DESCRIPTION = config["ssi"]["description"].strip('\"')
+        SSI_IMAGE = config["ssi"]["image"].strip('\"')
+
     else:
         print("Warning! config.ini missing. Wallet connection will not work!")
     # start server
@@ -1092,6 +1097,18 @@ if __name__ == '__main__':
         JOLOCOM_URL = os.environ["JOLOCOM_URL"]
     else:
         JOLOCOM_URL = "localhost:4040"
+    # set description
+    if "FIRSTRUN" in os.environ:
+        # set ssi description
+        print("FIRSTRUN active, setting up SSI ID")
+        myrequest = jolocom_backend.UpdatePublicProfile(name=SSI_NAME, description=SSI_DESCRIPTION, image=SSI_IMAGE, url=SSI_URL)
+        # do the websocket dance
+        if DEVELOPMENT:
+            print(myrequest)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+        loop.close()
     # create tempdir
     TEMPDIR = tempfile.mkdtemp()
     # connect to databases

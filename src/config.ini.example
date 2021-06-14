@@ -13,3 +13,7 @@ callback_url = http://192.168.0.1/api/wallet
 [ssi]
 # from the jolocom ssi service, see log
 did = "did...."
+name = "Our new ConDIDI Instance"
+description = "We issue demo credentials to you!"
+image = "https://oururl.invalid/600px-Example_image.svg.png"
+url = "https://oururl.invalid"
