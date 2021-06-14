@@ -15,7 +15,10 @@ import configparser
 import jolocom_backend
 import qrcode
 import datetime
+import tempfile
+import hashlib
 import condidi_email
+
 
 # TODO at the moment participants are independent of events. this needs more thinking.
 # all routes will be api based I guess
@@ -58,8 +61,7 @@ def make_jolocom_deeplink(message):
     return result
 
 
-def generate_qr(data):
-    filename = "qrtest.png"
+def generate_qr(data, filename="qrtest.png"):
     # generate qr code
     img = qrcode.make(data)
     # save img to a file
@@ -794,8 +796,14 @@ def issue_ticket():
                                            event=eventdict["name"], webtoken=message["result"]["interactionToken"])
     try:
         # TODO put this into a thread.
+        # create qrcode
+        qrfilename = os.path.join(TEMPDIR, hashlib.blake2b(message["result"]["interactionToken"].encode('utf-8'),
+                                                         digest_size=10).hexdigest())
+        generate_qr(message["result"]["interactionToken"], filename=qrfilename)
         condidi_email.send_email(myemail=SMTP_USER, mypass=SMTP_PASSWORD, mailserver=SMTP_SERVER,
-                             port=SMTP_PORT, message=emailmsg, email=participantdict["email"] )
+                             port=SMTP_PORT, message=emailmsg, email=participantdict["email"], qrcodefile=qrfilename)
+        # delete file
+        os.remove(qrfilename)
     except Exception as e:
         print("could not send email: %s" % e)
     return json.dumps(result)
@@ -1084,6 +1092,8 @@ if __name__ == '__main__':
         JOLOCOM_URL = os.environ["JOLOCOM_URL"]
     else:
         JOLOCOM_URL = "localhost:4040"
+    # create tempdir
+    TEMPDIR = tempfile.mkdtemp()
     # connect to databases
     if "ARANGO_URL" in os.environ:
         arangourl = "http://" + os.environ["ARANGO_URL"]
