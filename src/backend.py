@@ -1188,7 +1188,7 @@ if __name__ == '__main__':
         print("Warning! config.ini missing. Wallet connection will not work!")
     # start server
     if "DEVELOPMENT" in os.environ:
-        if os.environ["DEVELOPMENT"].lower()=="false"
+        if os.environ["DEVELOPMENT"].lower()=="false":
             DEVELOPMENT = False
         else:
             DEVELOPMENT = True
