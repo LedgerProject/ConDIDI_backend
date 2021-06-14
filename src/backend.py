@@ -219,12 +219,12 @@ async def talk_to_jolocom(message):
     :param message: message to send
     :return: ssiresponse
     """
-    print("talk to jolocom sdk:", message)
+    print("talk to jolocom sdk:\n", message)
     uri = "ws://" + JOLOCOM_URL
     async with websockets.connect(uri, timeout=10) as ws:
         await ws.send(json.dumps(message))
         ssiresponse = await asyncio.wait_for(ws.recv(), timeout=10)  # added timeout
-    print("received response: ", ssiresponse)
+    print("received response from J SDK: \n", ssiresponse)
     return ssiresponse
 
 
@@ -849,7 +849,7 @@ def issue_ticket():
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     # mark ticket as issued
     status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
-                                                             "ticked_issued": datetime.date.today().isoformat()})
+                                                             "ticket_issued": datetime.date.today().isoformat()})
     result = {"success": "yes", "error": "", "interactionToken": message["result"]["interactionToken"]}
     emailmsg = condidi_email.MsgTicket(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
                                            event=eventdict["name"], webtoken=message["result"]["interactionToken"])
@@ -1188,9 +1188,13 @@ if __name__ == '__main__':
         print("Warning! config.ini missing. Wallet connection will not work!")
     # start server
     if "DEVELOPMENT" in os.environ:
-        DEVELOPMENT = os.environ["DEVELOPMENT"]
+        if os.environ["DEVELOPMENT"].lower()=="false"
+            DEVELOPMENT = False
+        else:
+            DEVELOPMENT = True
     else:
         DEVELOPMENT = "True"
+    if DEVELOPMENT:
         print("Development mode, no gevent")
     if "JOLOCOM_URL" in os.environ:
         JOLOCOM_URL = os.environ["JOLOCOM_URL"]

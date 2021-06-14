@@ -42,7 +42,7 @@ class Participant(dict):
         """
         super().__init__()
         self.allowed_keys = ["userid", "first_name", "last_name", "email", "did", "payment_status", "attendence_status", "participation",
-                             "signup_date", "ticket_id", "ticked_issued", "credential_id", "event_id", "poa_id"]
+                             "signup_date", "ticket_id", "ticket_issued", "credential_id", "event_id", "poa_id"]
         if not noinit:
             for key in self.allowed_keys:
                 self[key] = None
