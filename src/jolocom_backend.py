@@ -74,7 +74,7 @@ class AuthenticationFlow(dict):
         self["jsonrpc"] = "2.0"
         self["method"] = "initiateAuthentication"
         self["params"] = {"callbackURL": callbackurl,
-                          "descritpion": description}
+                          "description": description}
         if not interactionid:
             interactionid = secrets.token_urlsafe(32)
         self["id"] = interactionid
