@@ -1148,7 +1148,7 @@ def wallet_callback():
             status = condidi_db.delete_interaction(db, interactionid=interactionid)
             # finally send back the credential to wallet
             response.status = 200
-            myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
+            myresponse = {"token": data["token"]}
             #if DEVELOPMENT:
             print("\n sending to wallet: ", json.dumps(myresponse))
             # testing
