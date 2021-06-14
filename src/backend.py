@@ -174,11 +174,13 @@ def request_proof_of_attendance(eventid, participantid):
     eventdict = condidi_db.get_event(db=db, eventid=eventid)
     description = "Please confirm that you participated in the event: %s on %s" %(eventdict["name"], eventdict["date"])
     myrequest = jolocom_backend.AuthenticationFlow(callbackurl=CALLBACK_URL, description=description)
+    #print("request for PoA:", myrequest)
     # do the websocket dance
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
     loop.close()
+    #print("Jolocom SDK response:", message)
     if DEVELOPMENT:
         print(message)
     # check for interaction id
@@ -217,10 +219,12 @@ async def talk_to_jolocom(message):
     :param message: message to send
     :return: ssiresponse
     """
+    print("talk to jolocom sdk:", message)
     uri = "ws://" + JOLOCOM_URL
     async with websockets.connect(uri, timeout=10) as ws:
         await ws.send(json.dumps(message))
         ssiresponse = await asyncio.wait_for(ws.recv(), timeout=10)  # added timeout
+    print("received response: ", ssiresponse)
     return ssiresponse
 
 
@@ -956,6 +960,7 @@ def wallet_callback():
     this is called by the ssi wallet. can handle different call backs
     :return:
     """
+    print("data from wallet:", data)
     data = request.json
     response.content_type = 'application/json'
     # all we get from the wallet, we send on to jolocom sdk, await response
@@ -1117,6 +1122,7 @@ def wallet_callback():
             except Exception as e:
                 print(e)
             # return None
+            print("to wallet: ", myresponse)
             return json.dumps(myresponse)
     elif interactiondict['type'] == 'proof_of_attendance':
         if ssiresponse["result"]["interactionInfo"]["completed"]:
@@ -1137,16 +1143,16 @@ def wallet_callback():
             # finally send back the credential to wallet
             response.status = 200
             myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
-            if DEVELOPMENT:
-                print("to wallet: ", json.dumps(myresponse))
+            #if DEVELOPMENT:
+            print("to wallet: ", json.dumps(myresponse))
             # testing
             # return None
             return json.dumps(myresponse)
     else:
         # unknown interaction, should not happen but what do I know
         response.status = 404
-        if DEVELOPMENT:
-            print("to wallet: ")
+        #if DEVELOPMENT:
+        print("unknown interaction from wallet")
         return ""
     response.status = 404
     if DEVELOPMENT:
