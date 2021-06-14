@@ -163,6 +163,53 @@ def check_for_token(data):
                 pass
     return token
 
+def request_proof_of_attendance(eventid, participantid):
+    """
+    Starts a authorization flow with the users wallet by sending an email asking for proof of attendance
+    :param eventid: ID of event
+    :param participantid: ID of participant
+    :return: True
+    """
+    participantdict = condidi_db.get_participant(db=db, participantid=participantid)
+    eventdict = condidi_db.get_event(db=db, eventid=eventid)
+    description = "Please confirm that you participated in the event: %s on %s" %(eventdict["name"], eventdict["date"])
+    myrequest = jolocom_backend.AuthenticationFlow(callbackurl=CALLBACK_URL, description=description)
+    # do the websocket dance
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
+    loop.close()
+    if DEVELOPMENT:
+        print(message)
+    # check for interaction id
+    if not myrequest["id"] == message["id"]:
+        result = {"success": "no", "error": "internal ID mismatch"}
+        return False
+    # just for testing
+    if DEVELOPMENT:
+        generate_qr(message["result"]["interactionToken"])
+    # save interaction data so we don't loose the information
+    interactiondict = {'type': 'proof_of_attendance', "eventid": eventid, "participantid": participantid}
+    condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
+    # mark ticket as issued
+    status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
+                                                             "attendence_status": "signature requested"})
+    emailmsg = condidi_email.MsgPoA(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
+                                           event=eventdict["name"], webtoken=message["result"]["interactionToken"])
+    try:
+        # TODO put this into a thread.
+        # create qrcode
+        qrfilename = os.path.join(TEMPDIR, hashlib.blake2b(message["result"]["interactionToken"].encode('utf-8'),
+                                                         digest_size=10).hexdigest())
+        generate_qr(message["result"]["interactionToken"], filename=qrfilename)
+        condidi_email.send_email(myemail=SMTP_USER, mypass=SMTP_PASSWORD, mailserver=SMTP_SERVER,
+                             port=SMTP_PORT, message=emailmsg, email=participantdict["email"], qrcodefile=qrfilename)
+        # delete file
+        os.remove(qrfilename)
+    except Exception as e:
+        print("could not send email: %s" % e)
+    return True
+
 
 async def talk_to_jolocom(message):
     """
@@ -594,6 +641,8 @@ def list_participants():
     participants = condidi_db.list_participants(db=db, eventid=eventid)
     participants = clean_participant_data(participants)
     result = {"success": "yes", "participants": participants}
+    if DEVELOPMENT:
+        print(result)
     return json.dumps(result)
 
 
@@ -1042,6 +1091,9 @@ def wallet_callback():
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # save credential for later
             credentialid = None
+            # get DID of the person with the ticket
+            participantdid = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
+            #participantdict = condidi_db.get_participant(db=db, participantid=interactiondict["participantid"])
             for credential in ssiresponse["result"]["interactionInfo"]["state"]["issued"]:
                 credentialid = credential["id"]
                 status, credentildata = condidi_db.add_credential(db, credentialid=credentialid,
@@ -1049,7 +1101,34 @@ def wallet_callback():
             # right now I don't really care if the credential was saved
             # add ticket id
             status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
-                                                                     "ticket id": credentialid})
+                                                                     "ticket id": credentialid, "did": participantdid})
+            # delete interaction
+            status = condidi_db.delete_interaction(db, interactionid=interactionid)
+            # finally send back the credential to wallet
+            response.status = 200
+            myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
+            if DEVELOPMENT:
+                print("to wallet: ", json.dumps(myresponse))
+            # testing
+            # send out request for proof of attendace
+            # TODO: request PaA only after the event, by some way of cron job
+            request_proof_of_attendance(eventid=interactiondict["eventid"], participantid=interactiondict["participantid"])
+            # return None
+            return json.dumps(myresponse)
+    elif interactiondict['type'] == 'proof_of_attendance':
+        if ssiresponse["result"]["interactionInfo"]["completed"]:
+            # save credential for later
+            credentialid = None
+            # get DID of the person with the ticket
+            participantdid = ssiresponse["result"]["interactionInfo"]["state"]["subject"]
+            credentialid = hashlib.blake2b(data, digest_size=20).hexdigest()
+            status, credentildata = condidi_db.add_credential(db, credentialid=credentialid,
+                                                                  credentialdict=data)
+            # right now I don't really care if the credential was saved
+            # TODO: check that DID did not change
+            status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
+                                                                     "attendence_status": "attendance confirmed",
+                                                                     "did": participantdid, "poa_id": credentialid})
             # delete interaction
             status = condidi_db.delete_interaction(db, interactionid=interactionid)
             # finally send back the credential to wallet

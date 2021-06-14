@@ -50,6 +50,48 @@ class MsgTicket(object):
         self.subject = "Your ticket for %s" % event
 
 
+class MsgPoA(object):
+    def __init__(self, firstname, lastname, event, webtoken):
+        super().__init__()
+        deeplink = make_jolocom_deeplink(webtoken)
+        self.text = """\
+        Dear %s %s,
+        please use the Jolocom smartwallet (available on Apple Appstore or Google Playstore) to confirm your attendance 
+        at the event %s.
+
+        With the smartwallet installed, click on this link: 
+        %s
+        or scan the attached image with your smartwallet
+
+        This message has been automatically created by the ConDIDI project (labs.tib.eu/condidi/).
+        If it has reached you in error, please let us know.
+        """ % (firstname, lastname, event, deeplink)
+        self.html = """\
+        <html>
+        <head></head>
+        <body>
+        <p>
+        Dear %s %s,<br>
+        please use the Jolocom smartwallet (available on Apple Appstore or Google Playstore) to confirm your attendance 
+        at the event %s.
+        </p>
+        <p>
+        With the smartwallet installed, click on this link: 
+        <a href="%s">Click here to open the ticket in the smart wallet!</a>
+        </p>
+        <p>
+        Or scan this image with your smartwallet:<br>
+        <img src="cid:image1" alt="qrcode" style="width: 90%%" />
+        </p>
+        <p>
+        This message has been automatically created by the ConDIDI project (labs.tib.eu/condidi/).
+        If it has reached you in error, please let us know.</p>
+        </body>
+        </html>
+        """ % (firstname, lastname, event, deeplink)
+        self.subject = "Please confirm your attendance at the event: %s" % event
+
+
 def send_email(myemail, mypass, mailserver, port, message, email, qrcodefile=None):
     msg = MIMEMultipart('related')
     msg['From'] = myemail
