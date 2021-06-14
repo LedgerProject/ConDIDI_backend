@@ -35,7 +35,7 @@ class MsgTicket(object):
         </p>
         <p>
         With the smartwallet installed, click on this link: 
-        <a href="%s">%s</a>
+        <a href="%s">Click here to open the ticket in the smart wallet!</a>
         </p>
         <p>
         Or scan this image with your smartwallet:<br>
