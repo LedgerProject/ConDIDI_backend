@@ -821,6 +821,7 @@ def issue_ticket():
     #          "name": "Event Name", "presenter": "John Example", "about": "A event discussing topic X",
     #          "time": "2021-03-15T13:14:03.836",
     #      "location": "Conference center X"
+    print("generating ticket send request...")
     myrequest = jolocom_backend.InitiateCredentialOffer(callbackurl=CALLBACK_URL,
                                                         credentialtype="EventInvitationCredential",
                                                         claimtype="EventInvitationCredential", claims=claims)
@@ -864,6 +865,7 @@ def issue_ticket():
         os.remove(qrfilename)
     except Exception as e:
         print("could not send email: %s" % e)
+    print("  ")
     return json.dumps(result)
 
 
@@ -961,12 +963,13 @@ def wallet_callback():
     :return:
     """
     data = request.json
-    print("data from wallet:", data)
+    print("\n data from wallet:\n", data)
     response.content_type = 'application/json'
     # all we get from the wallet, we send on to jolocom sdk, await response
     if DEVELOPMENT:
         print("from wallet: ", data)
     if "token" in data:
+        print("\n we got a token, so we send it to jSDK.\n")
         myrequest = jolocom_backend.ProcessInteractionToken(token=data['token'])
         if DEVELOPMENT:
             print("to jolocom: ", myrequest)
@@ -1127,6 +1130,7 @@ def wallet_callback():
             print("to wallet: ", myresponse)
             return json.dumps(myresponse)
     elif interactiondict['type'] == 'proof_of_attendance':
+        print("\n its a response to proof of attendance.")
         if ssiresponse["result"]["interactionInfo"]["completed"]:
             # save credential for later
             credentialid = None
@@ -1146,7 +1150,7 @@ def wallet_callback():
             response.status = 200
             myresponse = {"token": ssiresponse["result"]["interactionInfo"]["interactionToken"]}
             #if DEVELOPMENT:
-            print("to wallet: ", json.dumps(myresponse))
+            print("\n sending to wallet: ", json.dumps(myresponse))
             # testing
             # return None
             return json.dumps(myresponse)
