@@ -39,24 +39,26 @@ class MsgTicket(object):
         </p>
         <p>
         Or scan this image with your smartwallet:<br>
-        <img src="cid:image1" alt="qrcode">
+        <img src="cid:image1" alt="qrcode" style="width: 90%%" />
         </p>
         <p>
         This message has been automatically created by the ConDIDI project (labs.tib.eu/condidi/).
         If it has reached you in error, please let us know.</p>
+        </body>
+        </html>
         """  %(firstname,lastname,event,deeplink, deeplink)
         self.subject = "Your ticket for %s" % event
 
 
 def send_email(myemail, mypass, mailserver, port, message, email, qrcodefile=None):
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart('related')
     msg['From'] = myemail
     msg['To'] = email
     msg['Subject'] = message.subject
-    msg.attach(MIMEText(message.text, 'plain'))
     msg.attach(MIMEText(message.html, 'html'))
+    msg.attach(MIMEText(message.text, 'plain'))
     if qrcodefile:
-        with open(qrcodefile, 'rb') as fp
+        with open(qrcodefile, 'rb') as fp:
             msgImage = MIMEImage(fp.read())
             fp.close()
         msgImage.add_header('Content-ID', '<image1>')
