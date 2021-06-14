@@ -1128,7 +1128,8 @@ def wallet_callback():
                 print(e)
             # return None
             print("to wallet: ", myresponse)
-            return json.dumps(myresponse)
+            #return json.dumps(myresponse)
+            return None
     elif interactiondict['type'] == 'proof_of_attendance':
         print("\n its a response to proof of attendance.")
         if ssiresponse["result"]["interactionInfo"]["completed"]:
@@ -1153,7 +1154,8 @@ def wallet_callback():
             print("\n sending to wallet: ", json.dumps(myresponse))
             # testing
             # return None
-            return json.dumps(myresponse)
+            #return json.dumps(myresponse)
+            return None
     else:
         # unknown interaction, should not happen but what do I know
         response.status = 404
