@@ -1101,6 +1101,7 @@ if __name__ == '__main__':
     if "FIRSTRUN" in os.environ:
         # set ssi description
         print("FIRSTRUN active, setting up SSI ID")
+        time.sleep(10)
         myrequest = jolocom_backend.UpdatePublicProfile(name=SSI_NAME, description=SSI_DESCRIPTION, image=SSI_IMAGE, url=SSI_URL)
         # do the websocket dance
         if DEVELOPMENT:
