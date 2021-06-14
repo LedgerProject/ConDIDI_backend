@@ -1123,13 +1123,14 @@ def wallet_callback():
             # send out request for proof of attendace
             # TODO: request PaA only after the event, by some way of cron job
             try:
-                request_proof_of_attendance(eventid=interactiondict["eventid"], participantid=interactiondict["participantid"])
+                print("test")
+                #request_proof_of_attendance(eventid=interactiondict["eventid"], participantid=interactiondict["participantid"])
             except Exception as e:
                 print(e)
             # return None
             print("to wallet: ", myresponse)
-            #return json.dumps(myresponse)
-            return None
+            return json.dumps(myresponse)
+            # return None
     elif interactiondict['type'] == 'proof_of_attendance':
         print("\n its a response to proof of attendance.")
         if ssiresponse["result"]["interactionInfo"]["completed"]:
