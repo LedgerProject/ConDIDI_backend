@@ -1116,7 +1116,7 @@ if __name__ == '__main__':
             asyncio.set_event_loop(loop)
             message = json.loads(loop.run_until_complete(talk_to_jolocom(myrequest)))
             loop.close()
-        except TimeoutError:
+        except:
             print("timeout, will ignore")
             pass
     # create tempdir
