@@ -39,7 +39,7 @@ class MsgTicket(object):
         </p>
         <p>
         Or scan this image with your smartwallet:<br>
-        <img src="cid:image1" alt="qrcode" style="width: 90%%" />
+        <img src="cid:image1" alt="qrcode" style="width: 500px" />
         </p>
         <p>
         This message has been automatically created by the ConDIDI project (labs.tib.eu/condidi/).
@@ -81,7 +81,7 @@ class MsgPoA(object):
         </p>
         <p>
         Or scan this image with your smartwallet:<br>
-        <img src="cid:image1" alt="qrcode" style="width: 90%%" />
+        <img src="cid:image1" alt="qrcode" style="width: 500px" />
         </p>
         <p>
         This message has been automatically created by the ConDIDI project (labs.tib.eu/condidi/).
