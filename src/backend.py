@@ -195,7 +195,7 @@ def request_proof_of_attendance(eventid, participantid):
     condidi_db.add_interaction(db, interactionid=message["result"]["interactionId"], interactiondict=interactiondict)
     # mark ticket as issued
     status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
-                                                             "attendence_status": "signature requested"})
+                                                             "participation": "signature requested"})
     emailmsg = condidi_email.MsgPoA(firstname=participantdict["first_name"], lastname=participantdict["last_name"],
                                            event=eventdict["name"], webtoken=message["result"]["interactionToken"])
     try:
@@ -1144,7 +1144,7 @@ def wallet_callback():
             # right now I don't really care if the credential was saved
             # TODO: check that DID did not change
             status, participant = condidi_db.update_participant(db, {"participantid": interactiondict["participantid"],
-                                                                     "attendence_status": "attendance confirmed",
+                                                                     "participation": "participation signed",
                                                                      "did": participantdid, "poa_id": credentialid})
             # delete interaction
             status = condidi_db.delete_interaction(db, interactionid=interactionid)
