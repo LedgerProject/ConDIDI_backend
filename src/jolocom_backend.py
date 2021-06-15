@@ -5,6 +5,10 @@ import secrets
 class InitiateCredentialOffer(dict):
     def __init__(self, callbackurl, credentialtype, claimtype, claims, interactionid=None):
         super().__init__()
+        # make sure the claims are not None
+        for key in claims:
+            if not claims[key]:
+                claims[key] = ""
         self["jsonrpc"] = "2.0"
         self["method"] = "initiateCredentialOffer"
         self["params"] = {"callbackURL": callbackurl, "offeredCredentials": [{"type": credentialtype}],
