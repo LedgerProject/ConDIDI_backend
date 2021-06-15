@@ -16,7 +16,7 @@ class Event(dict):
         self.allowed_keys = ["name", "type", "subject", "schedule", "presenter", "venue_information", "address", "url", "organiser_institution",
                              "contact", "submission_deadline",
                              "registration_deadline", "date", "time", "organiser_userid",  "attendance_confirmation", "time_registration_deadline",
-                             "venue", "social_media"]
+                             "venue", "social_media", "locationType", "attendanceConfirmation", "socialMedia"]
         if not noinit:
             for key in self.allowed_keys:
                 self[key] = None
