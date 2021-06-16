@@ -56,8 +56,8 @@ class MsgPoA(object):
         deeplink = make_jolocom_deeplink(webtoken)
         self.text = """\
         Dear %s %s,
-        please use the Jolocom smartwallet (available on Apple Appstore or Google Playstore) to confirm your attendance 
-        at the event %s.
+        please use the Jolocom smartwallet (available on Apple Appstore or Google Playstore) to confirm that you have 
+        attended at the event %s.
 
         With the smartwallet installed, click on this link: 
         %s
@@ -89,7 +89,7 @@ class MsgPoA(object):
         </body>
         </html>
         """ % (firstname, lastname, event, deeplink)
-        self.subject = "Please confirm your attendance at the event: %s" % event
+        self.subject = "Please confirm that you have attended the event: %s" % event
 
 
 def send_email(myemail, mypass, mailserver, port, message, email, qrcodefile=None):
