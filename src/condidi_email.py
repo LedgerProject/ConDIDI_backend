@@ -93,6 +93,20 @@ class MsgPoA(object):
 
 
 def send_email(myemail, mypass, mailserver, port, message, email, qrcodefile=None):
+    """
+    Sends an email. Emails to '.invalid' domains will not be sent
+    :param myemail: FROM email
+    :param mypass: SMTP server password
+    :param mailserver: SMTP server address
+    :param port: SMTP server Port
+    :param message: email message
+    :param email:  TO address
+    :param qrcodefile: File with QR code
+    :return: True
+    """
+    if email.lower().strip().endswith(".invalid"):
+        print("email to .invalid will be ignored")
+        return True
     msg = MIMEMultipart('related')
     msg['From'] = myemail
     msg['To'] = email
