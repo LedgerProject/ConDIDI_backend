@@ -13,6 +13,8 @@ There is always something that should be done. In this document we collect issue
 - [ ] use SPHINX for automatic API documentation
 - [ ] instead of an organizer credential we could use the authentication workflow and the user DID
 - [ ] allow users to request new password or new login credential with their email.
+- [ ] move password for databases to config.ini file
+- [ ] better support for VC fields (see General)
 
 # Frontend
 - [ ] instead of sending Tickets immediately, offer a "send ticket" button
@@ -21,7 +23,7 @@ they are used as QR-codes or deep-links
 - [ ] allow users to request new password or new login credential with their email.
   
 # General
-- [ ] look into what fields should be used for credentials
+- [ ] look into what fields should be used for credentials, update jolocom microservice config.ts
 - [ ] support for linkedin
 - [ ] support for qualichain
 - [ ] support for ORCID
