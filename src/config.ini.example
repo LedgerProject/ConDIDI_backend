@@ -1,10 +1,10 @@
 [mail]
-smtp_server = 127.0.0.0.1
-smtp_port = 465
-smtp_user = test@test.out
-smtp_password = "hallo"
-# either None, SSL or TLS
-smtp_security = None
+#smtp_server = 127.0.0.1
+#smtp_port = 465
+#smtp_user = test@test.out
+#smtp_password = "hallo"
+# either None, SSL or TLS. only SSL is supported for now
+#smtp_security = SSL
 
 [network]
 # callback URL for wallet

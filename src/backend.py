@@ -1178,10 +1178,17 @@ if __name__ == '__main__':
         SSI_DID = config["ssi"]["did"].strip('\"')
         print("Callback url: -%s-" % CALLBACK_URL)
         print("SSI DID: -%s-" % SSI_DID)
-        SMTP_SERVER = config["mail"]["smtp_server"].strip('\"')
-        SMTP_PORT = config["mail"]["smtp_port"].strip('\"')
-        SMTP_USER = config["mail"]["smtp_user"].strip('\"')
-        SMTP_PASSWORD = config["mail"]["smtp_password"].strip('\"')
+        try:
+            SMTP_SERVER = config["mail"]["smtp_server"].strip('\"')
+            SMTP_PORT = config["mail"]["smtp_port"].strip('\"')
+            SMTP_USER = config["mail"]["smtp_user"].strip('\"')
+            SMTP_PASSWORD = config["mail"]["smtp_password"].strip('\"')
+        except KeyError as e:
+            print("Error in mail part of config.ini, \nEmail sending deactivated.\n" ,e)
+            SMTP_SERVER = None
+            SMTP_PORT = None
+            SMTP_USER = None
+            SMTP_PASSWORD = None
         SSI_NAME = config["ssi"]["name"].strip('\"')
         SSI_URL = config["ssi"]["url"].strip('\"')
         SSI_DESCRIPTION = config["ssi"]["description"].strip('\"')

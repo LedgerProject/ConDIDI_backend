@@ -92,9 +92,9 @@ class MsgPoA(object):
         self.subject = "Please confirm that you have attended the event: %s" % event
 
 
-def send_email(myemail, mypass, mailserver, port, message, email, qrcodefile=None):
+def send_email(message, email, myemail, mypass, mailserver=None, port=None, qrcodefile=None):
     """
-    Sends an email. Emails to '.invalid' domains will not be sent
+    Sends an email. Emails to '.invalid' domains will not be sent. also mailserver must not be None.
     :param myemail: FROM email
     :param mypass: SMTP server password
     :param mailserver: SMTP server address
@@ -104,6 +104,9 @@ def send_email(myemail, mypass, mailserver, port, message, email, qrcodefile=Non
     :param qrcodefile: File with QR code
     :return: True
     """
+    if not mailserver:
+        print("no mailserver given, no email is sent.")
+        return True
     if email.lower().strip().endswith(".invalid"):
         print("email to .invalid will be ignored")
         return True
