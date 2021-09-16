@@ -7,12 +7,12 @@ There is always something that should be done. In this document we collect issue
   * ask for jolocom id
   * send authentication email with test link
   * user is created if testlink is clicked
-- [ ] put Email sending into a separate grenlet so that it is sent asynchronously
+- [ ] put Email sending into a separate greenlet so that it is sent asynchronously
 - [ ] authenticate user signup emails
 - [ ] support TLS for email sending not just SSL
 - [ ] use SPHINX for automatic API documentation
 - [ ] instead of an organizer credential we could use the authentication workflow and the user DID
-- [ ] allow users to request new password or new login credential with their email.
+- [ ] allow users to request a new password or new login credential with their email.
 - [ ] move password for databases to config.ini file
 - [ ] better support for VC fields (see General)
 
@@ -20,7 +20,7 @@ There is always something that should be done. In this document we collect issue
 - [ ] instead of sending Tickets immediately, offer a "send ticket" button
 - [ ] as json web tokens are only valid once and expire quick, offer an easy way to re-issue them every time 
 they are used as QR-codes or deep-links
-- [ ] allow users to request new password or new login credential with their email.
+- [ ] allow users to request new a password or new login credential with their email.
   
 # General
 - [ ] look into what fields should be used for credentials, update jolocom microservice config.ts
